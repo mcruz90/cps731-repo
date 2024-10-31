@@ -12,8 +12,8 @@ Before you begin, ensure you have the following installed on your machine:
   - You can download it from [Node.js official website](https://nodejs.org/).
 - **Git**
   - Install Git from [Git official website](https://git-scm.com/).
-- **MySQL**
-  - Install MySQL from [MySQL official website](https://www.mysql.com/).
+- **Supabase**
+  - Install Supabase from [Supabase official website](https://supabase.com/).
 
 ## Cloning the Repository
 
