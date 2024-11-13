@@ -1,24 +1,31 @@
+// TODO: Add appointment list component here
+// TODO: connect to appointments.jsx to display actual appointment data
+// TODO: add reschedule and cancel functionality
+// TODO: add expanded view component/library/etc and such when appointment is selected
+// TODO: add messaging functionality to display messages between client and practitioner
 import { useState } from 'react';
 import { formatDate } from '@/utils/dateUtils';
 import { AppointmentStatus } from '@/components/UI/AppointmentStatus';
 import { Button } from '@/components/Button';
 import './AppointmentList.css';
+import PropTypes from 'prop-types';
 
-// fyi, each prop accepted by  are defined below
+
+// fyi, each prop accepted by AppointmentList is defined below
 // appointments: Array<{
 //     id: string;
 //     sessionType: string;
 //     date: string;
 //     time: string;
-//     instructor: string;
+//     instructor/practitioner: string;
 //     status: 'upcoming' | 'completed' | 'cancelled';
 // }>
 
 
 const AppointmentList = ({ 
-    appointments,
-    onCancelAppointment,
-    onReschedule }) => {
+    appointments = [],
+    onCancelAppointment = () => {},
+    onReschedule = () => {} }) => {
   const [selectedAppointment, setSelectedAppointment] = useState(null);
 
 
@@ -105,7 +112,7 @@ const AppointmentList = ({
       {selectedAppointment && (
         <div className="appointment-modal">
 
-          {/* Additional appointment details */}
+          {/* Need to render appointment details here */}
           <Button onClick={() => setSelectedAppointment(null)}>
             Close
           </Button>
@@ -116,3 +123,10 @@ const AppointmentList = ({
 };
 
 export default AppointmentList;
+
+// PropTypes
+AppointmentList.propTypes = {
+  appointments: PropTypes.array.isRequired,
+  onCancelAppointment: PropTypes.func.isRequired,
+  onReschedule: PropTypes.func.isRequired
+};

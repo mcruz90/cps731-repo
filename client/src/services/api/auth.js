@@ -1,31 +1,40 @@
-import axios from 'axios';
+import { supabase } from './index';
+import { profileService } from './profile';
 
-// Set Authorization header with JWT token
-const setAuthToken = (token) => {
-    if (token) {
-        localStorage.setItem('token', token);
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    } else {
-        localStorage.removeItem('token');
-        delete axios.defaults.headers.common['Authorization'];
+export const authService = {
+    async getCurrentSession() {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) throw error;
+      return session;
+    },
+  
+    async getUserProfile(userId) {
+      try {
+        const profile = await profileService.getProfile(userId);
+        return profile;
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+        return null;
+      }
+    },
+  
+    async login(email, password) {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) throw error;
+      return { user: data.user };
+    },
+  
+    async logout() {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    },
+  
+    onAuthStateChange(callback) {
+      return supabase.auth.onAuthStateChange(callback);
     }
-};
+  };
 
-// Login function
-export const login = async (email, password) => {
-    const response = await axios.post('/api/auth/login', { email, password });
-    const { token, user } = response.data;
-    setAuthToken(token);
-    return user;
-};
-
-// Logout function
-export const logout = () => {
-    setAuthToken(null);
-};
-
-// Initialize token on app load
-const token = localStorage.getItem('token');
-if (token) {
-    setAuthToken(token);
-}

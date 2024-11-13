@@ -1,73 +1,144 @@
-import { Link } from 'react-router-dom'; 
-import { useAuth } from '@/hooks/useAuth'; 
-import './Navbar.css';
+import { useState } from 'react';
+import { 
+  AppBar, 
+  Toolbar, 
+  Typography, 
+  Button,
+  CircularProgress,
+  Snackbar,
+  Alert 
+} from '@mui/material';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { styled } from '@mui/material/styles';
+
+const NavLink = styled(Link)({
+  color: 'inherit',
+  textDecoration: 'none',
+  marginLeft: '1rem'
+});
 
 const Navbar = () => {
-  const { isAuthenticated, isAdmin, logout } = useAuth();
+  const { isAuthenticated, userRole, logout, loadingState } = useAuth();
+  const navigate = useNavigate();
+  const [error, setError] = useState(null);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/');
+    } catch (err) {
+      console.error('Logout error:', err);
+      setError('Failed to logout. Please try again.');
+    }
+  };
+
+  // Render different navigation items based on authentication and role
+  const renderNavItems = () => {
+    if (!isAuthenticated) {
+      return (
+        <>
+          <Button 
+            component={NavLink} 
+            to="/login" 
+            color="inherit"
+          >
+            Login
+          </Button>
+          <Button 
+            component={NavLink} 
+            to="/register" 
+            color="inherit"
+          >
+            Register
+          </Button>
+        </>
+      );
+    }
+
+    // Role-specific navigation
+    const roleRoutes = {
+      client: '/client',
+      practitioner: '/practitioner',
+      admin: '/admin',
+      staff: '/staff'
+    };
+
+    return (
+      <>
+        <Button 
+          component={NavLink} 
+          to={roleRoutes[userRole] || '/'} 
+          color="inherit"
+        >
+          Dashboard
+        </Button>
+        <Button 
+          component={NavLink} 
+          to="/profile" 
+          color="inherit"
+        >
+          Profile
+        </Button>
+        <Button 
+          component={NavLink} 
+          to="/about" 
+          color="inherit"
+        >
+          About
+        </Button>
+        <Button 
+          color="inherit" 
+          onClick={handleLogout}
+          disabled={loadingState?.logout}
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 1 
+          }}
+        >
+          {loadingState?.logout ? (
+            <CircularProgress size={20} color="inherit" />
+          ) : (
+            'Logout'
+          )}
+        </Button>
+      </>
+    );
+  };
 
   return (
-    <nav className="navbar">
-      <div className="navbar__container">
-        <Link to="/" id="navbar__logo">
-          <i className="fa-solid fa-yin-yang"></i> Serenity
-        </Link>
+    <>
+      <AppBar position="static">
+        <Toolbar>
+          <Typography 
+            variant="h6" 
+            component={NavLink} 
+            to="/" 
+            sx={{ flexGrow: 1 }}
+          >
+            Serenity
+          </Typography>
+          {renderNavItems()}
+        </Toolbar>
+      </AppBar>
 
-        <div className="navbar__toggle" id="mobile-menu">
-          <span className="bar"></span>
-          <span className="bar"></span>
-          <span className="bar"></span>
-        </div>
-
-        <ul className="navbar__menu">
-          <li className="navbar__item">
-            <Link to="/" className="navbar__links">
-              Home
-            </Link>
-          </li>
-          
-          <li className="navbar__item">
-            <Link to="/about" className="navbar__links">
-              About
-            </Link>
-          </li>
-
-          {isAuthenticated && (
-            <>
-              <li className="navbar__item">
-                <Link to="/schedule" className="navbar__links">
-                  Schedule
-                </Link>
-              </li>
-
-              {isAdmin && (
-                <li className="navbar__item">
-                  <Link to="/finances" className="navbar__links">
-                    Finances
-                  </Link>
-                </li>
-              )}
-
-              <li className="navbar__item">
-                <button 
-                  onClick={logout}
-                  className="navbar__links"
-                >
-                  Logout
-                </button>
-              </li>
-            </>
-          )}
-
-          {!isAuthenticated && (
-            <li className="navbar__btn">
-              <Link to="/login" className="button">
-                Login
-              </Link>
-            </li>
-          )}
-        </ul>
-      </div>
-    </nav>
+      {/* Error Snackbar */}
+      <Snackbar 
+        open={!!error} 
+        autoHideDuration={6000} 
+        onClose={() => setError(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setError(null)} 
+          severity="error" 
+          sx={{ width: '100%' }}
+        >
+          {error}
+        </Alert>
+      </Snackbar>
+    </>
   );
 };
 
