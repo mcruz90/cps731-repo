@@ -1,3 +1,48 @@
+// Need to separate services to follow interaction diagram: (Client -> (Auth ->) Portal -> SchedulerSystem -> AppointmentService -> PaymentGateway)
+/*
+
+const handleConfirmBooking = async (finalFormData) => {
+  try {
+    // Start payment process
+    const paymentResult = await PaymentGateway.startPayment(formData.price);
+    
+    if (paymentResult.success) {
+      // Register appointment
+      const appointment = await AppointmentService.registerAppointment({
+        ...finalFormData,
+        paymentId: paymentResult.id
+      });
+      
+      setSuccess(true);
+      navigate('/appointments');
+    }
+  } catch (err) {
+    setError('Booking failed. Please try again.');
+  }
+}
+
+Interaction diagram sequence:
+
+const bookingSequence = async () => {
+  // 1. Authentication check
+  if (!isAuthenticated) return;
+  
+  // 2. Get available services
+  const services = await AppointmentService.getAvailableServices();
+  
+  // 3. Check scheduler
+  const availability = await SchedulerSystem.getAvailability();
+  
+  // 4. Process payment
+  const payment = await PaymentGateway.startPayment();
+  
+  // 5. Register appointment
+  const appointment = await AppointmentService.registerAppointment();
+}
+
+
+*/
+
 import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { 

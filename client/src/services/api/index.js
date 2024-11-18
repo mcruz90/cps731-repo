@@ -7,6 +7,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase credentials. Please check your environment variables.');
 }
 
+// Supabase client and auth set up
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   db: {
     schema: 'public'

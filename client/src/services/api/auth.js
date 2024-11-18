@@ -1,6 +1,7 @@
 import { supabase } from './index';
 import { profileService } from './profile';
 
+// Auth service set up using Supabase
 export const authService = {
     async getCurrentSession() {
       const { data: { session }, error } = await supabase.auth.getSession();

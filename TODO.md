@@ -39,7 +39,7 @@
 
 ## TODOs
 
-## Client Layer
+## Client Layer (`src/components`, `src/pages`, `src/context`)
 
 - [x] Portal separation (client, practitioner, admin, staff)
 - [ ] Subscriber implementation for:
@@ -47,123 +47,138 @@
   - [ ] Messages
   - [ ] Notifications
   - [ ] Products
+- [ ] WebSocket client setup for real-time updates
 
 **Technical Requirements:**
 
-- React
+- React (`src/components`, `src/pages`)
   - Rationale: Simpler learning curve, large community support, and sufficient for current needs
-- React Router DOM
+- React Router DOM (`src/App.jsx`, `src/pages`)
   - Rationale: De-facto routing solution for React, provides declarative routing
-- Axios for API calls
-  - Rationale: Consistent API across browsers, built-in request/response interceptors, better error handling than fetch
-- React Context for state management
-  - Rationale: Built into React, sufficient for our needs without Redux complexity
+- React Context for state management (`src/context`)
+  - Rationale: Built into React, sufficient for our needs without Redux complexity and verbosity
+- WebSocket client (`src/services/websocket.js`)
+  - Rationale: Enable real-time pub/sub communication with server
 
-### Server Layer
+### Backend Layer (Supabase) (`src/services`, `src/hooks`, `server/`)
 
-- [ ] REST API Gateway
-- [ ] Publishers implementation
-- [ ] Core Services setup
-
-**Technical Requirements:**
-
-- Express.js
-  - Rationale: Lightweight, flexible, great middleware ecosystem
-- JSON Web Tokens (jsonwebtoken)
-  - Rationale: Stateless authentication, reduces database load
-- Express Validator
-  - Rationale: Request validation middleware, prevents malformed data
-- CORS middleware
-  - Rationale: Secure cross-origin requests handling
-- Nodemailer for emails
-  - Rationale: Well-maintained, supports multiple email services
-
-### Data Layer
-
-- [ ] MySQL Database setup
-- [ ] Caching strategy (TBD)
+- [x] Database and API setup
+- [ ] Real-time subscriptions setup
+- [ ] WebSocket server implementation
+- [ ] Message broker integration
+- [ ] Event handlers for pub/sub patterns
 
 **Technical Requirements:**
 
-- MySQL
-  - Rationale: Team familiarity, ACID compliance, good for relational data
-- mysql2 package
-  - Rationale: Better performance than mysql package, supports promises
-- Database migrations (using node-mysql-migrate)
+- Supabase Client (`src/services/api/index.js`)
+  - Rationale: Takes care of both database and authentication
+- Redis (`server/broker.js`)
+  - Rationale: Message broker for pub/sub architecture
+- WebSocket Server (`server/websocket.js`)
+  - Rationale: Handle real-time bidirectional communication
+
+### Data Layer (`src/services`, `supabase/migrations`, `server/events`)
+
+- [x] PostgreSQL Database setup (via Supabase)
+- [ ] Row Level Security policies
+- [ ] Database triggers and functions
+- [ ] Event sourcing implementation
+- [ ] Message queue setup
+
+**Technical Requirements:**
+
+- PostgreSQL (managed by Supabase) (`supabase/migrations`)
+  - Rationale: Built-in to Supabase, powerful relational database
+- Database migrations (via Supabase CLI) (`supabase/migrations`)
   - Rationale: Version control for database schema
+- Redis Pub/Sub (`server/events`)
+  - Rationale: Handle event distribution in pub/sub architecture
+- Event Store (`server/eventStore.js`)
+  - Rationale: Maintain event history for pub/sub system
 
 ## 📋 Feature Implementation
 
-### Authentication & Authorization
+### Authentication & Authorization (`src/context/AuthContext`, `src/services/auth.js`)
 
-- [ ] Login/Logout system
-- [ ] Role-based access
-- [ ] Session management
+- [x] Login/Logout system
+- [x] Role-based access
+- [x] Session management
 - [ ] Auto logout on inactivity
+- [ ] Social auth providers integration (e.g. Google, etc)
+- [ ] 2FA setup for elevated roles (i.e. non-client roles) (TBD)
+- [ ] WebSocket authentication
 
 **Technical Requirements:**
 
-- bcrypt for password hashing
-  - Rationale: Industry standard, secure salt generation
-- express-session for sessions
-  - Rationale: Session handling with optional Redis support later
-- Cookie handling
-  - Rationale: Secure session management
+- Supabase Auth (`src/services/auth.js`)
+  - Rationale: Handles authentication, session management, and security
+- Row Level Security (defined in Supabase dashboard)
+  - Rationale: Fine-grained access control at the database level
+- Custom claims and policies (defined in Supabase dashboard)
+  - Rationale: Role-based access control implementation
 
-### Appointment System
+### Appointment System (`src/pages/client/appointments`, `src/services/appointments.js`, `server/publishers`)
 
 - [ ] Schedule display
 - [ ] Booking system
 - [ ] Updates handling
+- [ ] Real-time availability updates
+- [ ] Appointment event publishing
 
 **Technical Requirements:**
 
-- FullCalendar
-  - Rationale: Feature-rich, handles complex scheduling scenarios
 - date-fns
   - Rationale: Lightweight date manipulation, tree-shakeable
-- Socket.IO (if real-time needed)
-  - Rationale: Bi-directional communication, fallback options
+- Redis Pub/Sub
+  - Rationale: Real-time appointment updates distribution
+- WebSocket
+  - Rationale: Push updates to subscribed clients
 
-### Communication System
+### Communication System (`src/components/messaging`, `src/services/messaging.js`, `server/publishers`)
 
 - [ ] Messaging
 - [ ] Notifications
 - [ ] Email notifications
+- [ ] Real-time message delivery
+- [ ] Message event publishing
 
 **Technical Requirements:**
 
-- Socket.IO for real-time features
-  - Rationale: Handles WebSocket with fallbacks, room support
-- Nodemailer
-  - Rationale: Email sending with template support
+- WebSocket for real-time features (`src/services/websocket.js`)
+  - Rationale: Real-time message delivery to subscribers
+- Redis Pub/Sub (`server/publishers/messaging.js`)
+  - Rationale: Message event distribution
+- Nodemailer (`src/services/email.js`)
+  - Rationale: Email notifications for subscribers
 
-### Financial Management
+### Financial Management (`src/components/financial`, `src/services/payments.js`, `server/publishers`)
 
 - [ ] Payment processing
 - [ ] Reports
 - [ ] Invoices
+- [ ] Transaction event publishing
 
 **Technical Requirements:**
 
-- Stripe for payments
-  - Rationale: Well-documented, secure, handles compliance
-- html-pdf for PDF generation
+- Paypal sandbox for payments (`src/services/payments.js`)
+  - Rationale: Easy to setup and use for testing
+- html-pdf for PDF generation (`src/services/pdf.js`)
   - Rationale: Convert HTML/CSS to PDF, customizable templates
+- Redis Pub/Sub (`server/publishers/transactions.js`)
+  - Rationale: Transaction event distribution
 
 ## 👥 Team Division
 
-### Frontend Team (2 members)
+### Frontend Team
 
 Focus areas:
 
 - Component architecture
-- Form handling (react-hook-form)
-  - Rationale: Performance, minimal re-renders
+- Form handling
 - API integration
 - UI/UX implementation
 
-### Backend Team (2 members)
+### Backend Team
 
 Focus areas:
 

@@ -68,13 +68,8 @@ function App() {
           {/* Public Routes */}
           <Route exact path="/" element={<Home />} />
           <Route exact path="/about" element={<About />} />
-          <Route 
-            exact path="/login" 
-            element={
-              isAuthenticated ? <Navigate to="/" /> : <Login />
-            } 
-          />
-
+          <Route exact path="/login" element={isAuthenticated ? <Navigate to="/" /> : <Login />} />
+          
           {/* Protected Routes */}
           <Route
             path="/client/*"
@@ -96,7 +91,7 @@ function App() {
           />
 
           <Route
-            path="practitioner"
+            path="/practitioner/*"
             element={
               <ProtectedRoute allowedRoles={['practitioner']}>
                 <PractitionerPortal />
@@ -105,7 +100,7 @@ function App() {
           />
 
           <Route
-            path="admin"
+            path="/admin/*"
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <AdminPortal />
@@ -114,7 +109,7 @@ function App() {
           />
 
           <Route
-            path="staff"
+            path="/staff/*"
             element={
               <ProtectedRoute allowedRoles={['staff']}>
                 <StaffPortal />
