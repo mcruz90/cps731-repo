@@ -9,9 +9,9 @@ import {
   CircularProgress,
   Alert,
   Box,
-  Chip
+  Chip,
+  Grid
 } from '@mui/material';
-import { Grid } from '@mui/material/Grid2';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
