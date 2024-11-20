@@ -1,12 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
-import { 
+import { useState, useEffect, useCallback } from "react";
+import {
   TableContainer,
   Table,
   TableHead,
   TableRow,
   TableCell,
-  Typography, 
-  Card, 
+  Typography,
+  Card,
   CardContent,
   Button,
   Box,
@@ -14,34 +14,32 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
-} from '@mui/material';
-import Grid from '@mui/material/Grid2';
-import { useNavigate } from 'react-router-dom';
-import PortalLayout from '@/components/Layout/PortalLayout';
-import { inventoryService } from '@/services/api/inventory';
-import { useAuth } from '@/hooks/useAuth';
-import Appointments from '../../client/pages/Appointments';
-import EditInventoryItem from './EditInventoryItem';
+  DialogActions,
+} from "@mui/material";
+import Grid from "@mui/material/Grid2";
+import { useNavigate } from "react-router-dom";
+import PortalLayout from "@/components/Layout/PortalLayout";
+import { inventoryService } from "@/services/api/inventory";
+import { useAuth } from "@/hooks/useAuth";
+import Appointments from "../../client/pages/Appointments";
+import EditInventoryItem from "./EditInventoryItem";
 
 const Inventory = () => {
-  
-  
-  const [inventory, setInventory] = useState([])
+  const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [editingItem, setEditingItem] = useState(null);  
+  const [editingItem, setEditingItem] = useState(null);
 
   const { user } = useAuth();
   const navigate = useNavigate();
 
   const fetchProducts = useCallback(async () => {
     if (!user) return;
-  
+
     try {
       const data = await inventoryService.retrieveInventory();
       setInventory(data);
     } catch (error) {
-      console.error('Error retrieving inventory:', error);
+      console.error("Error retrieving inventory:", error);
     } finally {
       setLoading(false);
     }
@@ -52,13 +50,13 @@ const Inventory = () => {
   }, [fetchProducts]);
 
   console.log(inventory[0]);
-  
+
   return (
     <PortalLayout>
-      <Typography variant="h4" component="h1" gutterBottom>
+      <Typography variant='h4' component='h1' gutterBottom>
         Inventory
       </Typography>
-  
+
       {editingItem ? (
         <EditInventoryItem
           item={editingItem}
@@ -70,18 +68,28 @@ const Inventory = () => {
             );
             setEditingItem(null);
           }}
-          onCancel={() => setEditingItem(null)} 
+          onCancel={() => setEditingItem(null)}
         />
       ) : (
         <TableContainer>
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell><strong>Name</strong></TableCell>
-                <TableCell><strong>Description</strong></TableCell>
-                <TableCell><strong>Price</strong></TableCell>
-                <TableCell><strong>Quantity</strong></TableCell>
-                <TableCell><strong>Actions</strong></TableCell>
+                <TableCell>
+                  <strong>Name</strong>
+                </TableCell>
+                <TableCell>
+                  <strong>Description</strong>
+                </TableCell>
+                <TableCell>
+                  <strong>Price</strong>
+                </TableCell>
+                <TableCell>
+                  <strong>Quantity</strong>
+                </TableCell>
+                <TableCell>
+                  <strong>Actions</strong>
+                </TableCell>
               </TableRow>
             </TableHead>
             {inventory.map((product) => (
@@ -91,7 +99,9 @@ const Inventory = () => {
                 <TableCell>{product.price}</TableCell>
                 <TableCell>{product.quantity}</TableCell>
                 <TableCell>
-                  <Button variant="outlined" onClick={() => setEditingItem(product)}>
+                  <Button
+                    variant='outlined'
+                    onClick={() => setEditingItem(product)}>
                     Edit
                   </Button>
                 </TableCell>
@@ -101,7 +111,7 @@ const Inventory = () => {
         </TableContainer>
       )}
     </PortalLayout>
-  ); 
+  );
 };
 
-export default Inventory
+export default Inventory;
