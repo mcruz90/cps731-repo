@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import PropTypes from 'prop-types';
 import { 
   Button, 
   Card, 
@@ -18,7 +19,6 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import GroupIcon from '@mui/icons-material/Group';
 import PortalLayout from '@/components/Layout/PortalLayout';
 import { reportService } from '@/services/api/reports';
-import PropTypes from 'prop-types';
 
 const DashboardCard = ({ title, value, icon, color = 'primary', isLoading, error }) => (
   <Card>
@@ -41,6 +41,26 @@ const DashboardCard = ({ title, value, icon, color = 'primary', isLoading, error
     </CardContent>
   </Card>
 );
+
+// Add PropTypes validation
+DashboardCard.propTypes = {
+  title: PropTypes.string.isRequired,
+  value: PropTypes.oneOfType([
+    PropTypes.string,
+    PropTypes.number
+  ]).isRequired,
+  icon: PropTypes.node.isRequired,
+  color: PropTypes.string,
+  isLoading: PropTypes.bool,
+  error: PropTypes.string
+};
+
+// Add default props
+DashboardCard.defaultProps = {
+  color: 'primary',
+  isLoading: false,
+  error: null
+};
 
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
@@ -67,25 +87,6 @@ const Dashboard = () => {
       style: 'currency',
       currency: 'USD'
     }).format(amount);
-  };
-
-  // Add PropTypes validation
-DashboardCard.propTypes = {
-  title: PropTypes.string.isRequired,
-  value: PropTypes.oneOfType([
-    PropTypes.string,
-    PropTypes.number
-  ]).isRequired,
-  icon: PropTypes.node.isRequired,
-  color: PropTypes.string,
-  isLoading: PropTypes.bool,
-  error: PropTypes.string
-};
-
-DashboardCard.defaultProps = {
-  color: 'primary',
-  isLoading: false,
-    error: null
   };
 
   return (
