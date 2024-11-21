@@ -24,30 +24,5 @@ export const userService = {
       
     if (error) throw error;
     return data;
-  },
-
-  // Get all users with some of their profile data--only available to admins
-  getAllUsers: async () => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          first_name,
-          last_name,
-          email,
-          phone,
-          city,
-          role,
-          created_at
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      throw error;
-    }
   }
 };

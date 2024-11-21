@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { 
   Button, 
@@ -9,38 +8,60 @@ import {
   CircularProgress,
   Alert,
   Box,
-  Chip,
   Grid
 } from '@mui/material';
-import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import CancelIcon from '@mui/icons-material/Cancel';
-import GroupIcon from '@mui/icons-material/Group';
 import PortalLayout from '@/components/Layout/PortalLayout';
 import { reportService } from '@/services/api/reports';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import AppointmentReports from './components/AppointmentReports';
+import { Link } from 'react-router-dom';
+import AssessmentIcon from '@mui/icons-material/Assessment';
 
-const DashboardCard = ({ title, value, icon, color = 'primary', isLoading, error }) => (
-  <Card>
-    <CardContent>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-        {icon}
-        <Typography variant="h6" sx={{ ml: 1 }}>
-          {title}
-        </Typography>
-      </Box>
-      {isLoading ? (
-        <CircularProgress size={24} />
-      ) : error ? (
-        <Typography color="error" variant="body2">{error}</Typography>
-      ) : (
-        <Typography variant="h3" color={`${color}.main`}>
-          {value}
-        </Typography>
-      )}
-    </CardContent>
-  </Card>
-);
+// Cache constants to prevent constant re-renders
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_KEY = 'dashboardData';
+
+// Helper function to handle cache
+const getCachedData = () => {
+  const cached = localStorage.getItem(CACHE_KEY);
+  if (!cached) return null;
+  
+  const { data, timestamp } = JSON.parse(cached);
+  if (Date.now() - timestamp < CACHE_DURATION) {
+    return data;
+  }
+  
+  localStorage.removeItem(CACHE_KEY);
+  return null;
+};
+
+// Memoize the DashboardCard component to prevent unnecessary re-renders
+const DashboardCard = React.memo(function DashboardCard({ title, value, icon, color = 'primary', isLoading, error }) {
+  return (
+    <Card>
+      <CardContent>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          {icon}
+          <Typography variant="h6" sx={{ ml: 1 }}>
+            {title}
+          </Typography>
+        </Box>
+        {isLoading ? (
+          <CircularProgress size={24} />
+        ) : error ? (
+          <Typography color="error" variant="body2">{error}</Typography>
+        ) : (
+          <Typography variant="h3" color={`${color}.main`}>
+            {value}
+          </Typography>
+        )}
+      </CardContent>
+    </Card>
+  );
+});
 
 // Add PropTypes validation
 DashboardCard.propTypes = {
@@ -63,41 +84,131 @@ DashboardCard.defaultProps = {
 };
 
 const Dashboard = () => {
-  const [dashboardData, setDashboardData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState(() => getCachedData());
+  const [loading, setLoading] = useState(!dashboardData);
   const [error, setError] = useState(null);
+  const [isVisible, setIsVisible] = useState(!document.hidden);
 
+  // Memoize the currency formatter
+  const formatCurrency = useCallback((amount) => {
+    return new Intl.NumberFormat('en-CA', {
+      style: 'currency',
+      currency: 'CAD'
+    }).format(amount);
+  }, []);
+
+  // Handle visibility change
   useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsVisible(!document.hidden);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  // Fetch data
+  useEffect(() => {
+    let isMounted = true;
+
     const fetchDashboardData = async () => {
-      try {
-        const data = await reportService.getDashboardSummary();
-        setDashboardData(data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
+      // If we have cached data, use it
+      const cachedData = getCachedData();
+      if (cachedData) {
+        setDashboardData(cachedData);
         setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const data = await reportService.getDashboardSummary();
+        
+        if (isMounted) {
+          setDashboardData(data);
+          // Cache the new data
+          localStorage.setItem(CACHE_KEY, JSON.stringify({
+            data,
+            timestamp: Date.now()
+          }));
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err.message);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
-    fetchDashboardData();
-  }, []);
+    // Only fetch if the tab is visible and we don't have valid cached data
+    if (isVisible && !getCachedData()) {
+      fetchDashboardData();
+    }
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
+    return () => {
+      isMounted = false;
+    };
+  }, [isVisible]); 
+
+  // Update the dashboard metrics to show weekly data
+  const dashboardMetrics = useMemo(() => ({
+    weeklyAppointments: dashboardData?.weeklyAppointments || 0,
+    weeklyRevenue: formatCurrency(dashboardData?.weeklyRevenue || 0),
+    weeklyCancellations: dashboardData?.weeklyCancellations || 0,
+    weeklyRevenueLoss: formatCurrency(dashboardData?.weeklyRevenueLoss || 0)
+  }), [dashboardData, formatCurrency]);
+
+  // Add refresh function
+  const handleRefresh = useCallback(async () => {
+    localStorage.removeItem(CACHE_KEY);
+    try {
+      setLoading(true);
+      const data = await reportService.getDashboardSummary();
+      setDashboardData(data);
+      localStorage.setItem(CACHE_KEY, JSON.stringify({
+        data,
+        timestamp: Date.now()
+      }));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   return (
     <PortalLayout>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Admin Dashboard
-        </Typography>
-        <Typography variant="subtitle1" color="text.secondary">
-          Overview of business metrics
-        </Typography>
+      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <Typography variant="h4" component="h1" gutterBottom>
+            Admin Dashboard
+          </Typography>
+          <Typography variant="subtitle1" color="text.secondary">
+            Weekly Overview
+          </Typography>
+        </div>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button 
+            onClick={handleRefresh}
+            disabled={loading}
+            startIcon={<RefreshIcon />}
+          >
+            Refresh
+          </Button>
+          <Button
+            component={Link}
+            to="/admin/reports"
+            variant="contained"
+            startIcon={<AssessmentIcon />}
+          >
+            View Full Reports
+          </Button>
+        </Box>
       </Box>
 
       {error && (
@@ -107,101 +218,52 @@ const Dashboard = () => {
       )}
       
       <Grid container spacing={3}>
-        {/* Today's Appointments */}
+        {/* Weekly Appointments */}
         <Grid item xs={12} md={6} lg={3}>
           <DashboardCard
-            title="Today's Appointments"
-            value={dashboardData?.todayAppointments || 0}
+            title="Appointments This Week"
+            value={dashboardMetrics.weeklyAppointments}
             icon={<CalendarTodayIcon color="primary" />}
             isLoading={loading}
           />
         </Grid>
 
-        {/* Today's Revenue */}
+        {/* Weekly Revenue */}
         <Grid item xs={12} md={6} lg={3}>
           <DashboardCard
-            title="Today's Revenue"
-            value={formatCurrency(dashboardData?.todayRevenue || 0)}
+            title="Revenue This Week"
+            value={dashboardMetrics.weeklyRevenue}
             icon={<AttachMoneyIcon color="success" />}
             color="success"
             isLoading={loading}
           />
         </Grid>
 
-        {/* Cancelled Appointments */}
+        {/* Weekly Cancellations */}
         <Grid item xs={12} md={6} lg={3}>
           <DashboardCard
-            title="Cancelled Today"
-            value={dashboardData?.cancelledAppointments || 0}
+            title="Cancellations This Week"
+            value={dashboardMetrics.weeklyCancellations}
             icon={<CancelIcon color="error" />}
             color="error"
             isLoading={loading}
           />
         </Grid>
 
-        {/* Revenue Loss */}
+        {/* Weekly Revenue Loss */}
         <Grid item xs={12} md={6} lg={3}>
           <DashboardCard
-            title="Potential Revenue Loss"
-            value={formatCurrency(dashboardData?.potentialRevenueLoss || 0)}
+            title="Weekly Revenue Loss"
+            value={dashboardMetrics.weeklyRevenueLoss}
             icon={<AttachMoneyIcon color="warning" />}
             color="warning"
             isLoading={loading}
           />
         </Grid>
 
-        {/* Quick Actions */}
+        {/* Appointment Reports */}
         <Grid item xs={12}>
-          <Card sx={{ mt: 2 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Quick Actions
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <Button
-                  component={Link}
-                  to="add-users"
-                  variant="contained"
-                  startIcon={<PersonAddIcon />}
-                >
-                  Add New User
-                </Button>
-                <Button
-                  component={Link}
-                  to="users"
-                  variant="outlined"
-                  startIcon={<GroupIcon />}
-                >
-                  Manage Users
-                </Button>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Recent Activity */}
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Today&apos;s Appointments Status
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                <Chip 
-                  label={`${dashboardData?.completedAppointments || 0} Completed`}
-                  color="success"
-                />
-                <Chip 
-                  label={`${dashboardData?.upcomingAppointments || 0} Upcoming`}
-                  color="primary"
-                />
-                <Chip 
-                  label={`${dashboardData?.cancelledAppointments || 0} Cancelled`}
-                  color="error"
-                />
-              </Box>
-            </CardContent>
-          </Card>
+          <AppointmentReports />
         </Grid>
       </Grid>
     </PortalLayout>

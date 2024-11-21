@@ -2,6 +2,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import PropTypes from 'prop-types';
 import { useAuth } from './hooks/useAuth';
 import { Box, CircularProgress } from '@mui/material';
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 // Pages
 import Home from './pages/Home';
@@ -62,9 +64,10 @@ function App() {
   });
 
   return (
-    <Router>
-      <Navbar />
-      <Routes>
+    <LocalizationProvider dateAdapter={AdapterDateFns}>
+      <Router>
+        <Navbar />
+        <Routes>
           {/* Public Routes */}
           <Route exact path="/" element={<Home />} />
           <Route exact path="/about" element={<About />} />
@@ -130,7 +133,8 @@ function App() {
             })()
           } />
         </Routes>
-    </Router>
+      </Router>
+    </LocalizationProvider>
   );
 }
 

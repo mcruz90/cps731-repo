@@ -23,7 +23,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     let mounted = true;
     
-    //
+    // Initialize the authentication state
     const initializeAuth = async () => {
       try {
         setLoadingState(prev => ({ ...prev, auth: true }));

@@ -9,9 +9,9 @@ import {
   Paper,
   Alert,
   Snackbar,
-  CircularProgress 
+  CircularProgress ,
+  Grid
 } from '@mui/material';
-import Grid from '@mui/material/Grid2';
 
 export default function Profile() {
   console.log('Profile component rendering');
