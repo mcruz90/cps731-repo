@@ -9,7 +9,7 @@ import Reports from './Reports';
 const AdminPortal = () => {
   return (
     <>
-      <nav style={{ marginBottom: '20px' }}>
+      <nav style={{ marginBottom: '20px', display: 'flex', gap: '20px', padding: '10px' }}>
         <Link to="" style={{ marginRight: '20px' }}>Dashboard</Link>
         <Link to="products" style={{ marginRight: '20px' }}>Products</Link>
         <Link to="profile" style={{ marginRight: '20px' }}>Profile</Link>

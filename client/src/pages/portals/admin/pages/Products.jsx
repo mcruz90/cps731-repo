@@ -24,6 +24,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Tooltip,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -32,6 +33,16 @@ import { adminService } from '@/services/api/admin';
 import ProductDialog from './components/ProductDialog';
 import SearchIcon from '@mui/icons-material/Search';
 import SortIcon from '@mui/icons-material/Sort';
+import { styled } from '@mui/material/styles';
+
+const ProfitCell = styled(TableCell)(({ theme, profitMargin }) => ({
+  color: profitMargin === 0 
+    ? theme.palette.text.primary
+    : profitMargin < 30 
+      ? theme.palette.error.main 
+      : theme.palette.success.main,
+  fontWeight: 'bold'
+}));
 
 const Products = () => {
   const [products, setProducts] = useState([]);
@@ -114,7 +125,14 @@ const Products = () => {
 
   const handleSaveEdit = async (editedData) => {
     try {
-      await adminService.updateProduct(selectedProduct.id, editedData);
+      const updateData = {
+        name: editedData.name,
+        description: editedData.description,
+        price: editedData.price,
+        quantity: editedData.quantity,
+        supply_cost: editedData.supply_cost
+      };
+      await adminService.updateProduct(selectedProduct.id, updateData);
       await fetchProducts();
       setEditDialogOpen(false);
       setSelectedProduct(null);
@@ -161,8 +179,8 @@ const Products = () => {
   if (error) return <Alert severity="error">{error}</Alert>;
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
         <Typography variant="h5">Products Management</Typography>
         <Button
           variant="contained"
@@ -245,7 +263,20 @@ const Products = () => {
                   <TableCell align="right">{product.price.toFixed(2)}</TableCell>
                   <TableCell align="right">{product.quantity}</TableCell>
                   <TableCell align="right">{Number(product.supply_cost).toFixed(2)}</TableCell>
-                  <TableCell align="right">{Number(product.profit_margin).toFixed(2)}</TableCell>
+                  <Tooltip title={
+                    product.profit_margin === 0 
+                      ? "No profit margin" 
+                      : product.profit_margin < 30 
+                        ? "Low profit margin" 
+                        : "Healthy profit margin"
+                  }>
+                    <ProfitCell 
+                      align="right"
+                      profitMargin={Number(product.profit_margin)}
+                    >
+                      {Number(product.profit_margin).toFixed(2)}
+                    </ProfitCell>
+                  </Tooltip>
                   <TableCell>
                     <IconButton onClick={() => handleEditClick(product)}>
                       <EditIcon />

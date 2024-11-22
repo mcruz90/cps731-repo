@@ -18,6 +18,7 @@ import {
 import { adminService } from '@/services/api/admin';
 import { Link } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import PortalLayout from '@/components/Layout/PortalLayout';
 
 const AddUsers = () => {
   const [formData, setFormData] = useState({
@@ -96,7 +97,7 @@ const AddUsers = () => {
   };
 
   return (
-    <>
+    <PortalLayout>
       <Box sx={{ mb: 3 }}>
         <Button
           component={Link}
@@ -332,7 +333,7 @@ const AddUsers = () => {
           </Snackbar>
         </CardContent>
       </Card>
-    </>
+    </PortalLayout>
   );
 };
 

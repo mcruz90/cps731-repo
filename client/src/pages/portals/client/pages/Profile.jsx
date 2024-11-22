@@ -12,6 +12,7 @@ import {
   CircularProgress 
 } from '@mui/material';
 import Grid from '@mui/material/Grid2';
+import PortalLayout from '@/components/Layout/PortalLayout';
 
 export default function Profile() {
   console.log('Profile component rendering');
@@ -137,8 +138,9 @@ export default function Profile() {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Paper sx={{ p: 3 }}>
+    <PortalLayout>
+      <Box>
+        <Paper sx={{ p: 3 }}>
         <Typography variant="h5" gutterBottom>
           Profile Settings
         </Typography>
@@ -268,6 +270,7 @@ export default function Profile() {
           </Alert>
         </Snackbar>
       </Paper>
-    </Box>
+      </Box>
+    </PortalLayout>
   );
 }

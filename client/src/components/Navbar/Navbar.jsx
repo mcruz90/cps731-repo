@@ -6,11 +6,13 @@ import {
   Button,
   CircularProgress,
   Snackbar,
-  Alert 
+  Alert,
+  Box 
 } from '@mui/material';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { styled } from '@mui/material/styles';
+import CartButton from './CartButton';
 
 const NavLink = styled(Link)({
   color: 'inherit',
@@ -65,7 +67,7 @@ const Navbar = () => {
     };
 
     return (
-      <>
+      <Box sx={{ display: 'flex', alignItems: 'center' }}>
         <Button 
           component={NavLink} 
           to={roleRoutes[userRole] || '/'} 
@@ -87,6 +89,7 @@ const Navbar = () => {
         >
           About
         </Button>
+        {userRole === 'client' && <CartButton />} {/* Only show for clients */}
         <Button 
           color="inherit" 
           onClick={handleLogout}
@@ -103,7 +106,7 @@ const Navbar = () => {
             'Logout'
           )}
         </Button>
-      </>
+      </Box>
     );
   };
 

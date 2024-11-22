@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { profileService } from '@/services/api/profile';
+import PortalLayout from '@/components/Layout/PortalLayout';
 import { 
   Box, 
   TextField, 
@@ -137,6 +138,7 @@ export default function Profile() {
   }
 
   return (
+    <PortalLayout>
     <Box sx={{ p: 3 }}>
       <Paper sx={{ p: 3 }}>
         <Typography variant="h5" gutterBottom>
@@ -268,6 +270,7 @@ export default function Profile() {
           </Alert>
         </Snackbar>
       </Paper>
-    </Box>
+      </Box>
+    </PortalLayout>
   );
 }
