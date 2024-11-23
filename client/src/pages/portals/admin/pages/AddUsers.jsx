@@ -13,7 +13,9 @@ import {
   Alert, 
   Snackbar,
   Grid,
-  Divider
+  Divider,
+  FormControlLabel,
+  Switch
 } from '@mui/material';
 import { adminService } from '@/services/api/admin';
 import { Link } from 'react-router-dom';
@@ -38,6 +40,7 @@ const AddUsers = () => {
     specializations: '',
     availability: '',
     startDate: '',
+    sendWelcomeEmail: true,
   };
 
   const {
@@ -163,6 +166,20 @@ const AddUsers = () => {
                     fullWidth
                     required
                   />
+                </Grid>
+                <Grid item xs={12}>
+                  <FormControl fullWidth>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={values.sendWelcomeEmail}
+                          onChange={handleChange}
+                          name="sendWelcomeEmail"
+                        />
+                      }
+                      label="Send welcome email with login credentials"
+                    />
+                  </FormControl>
                 </Grid>
               </Grid>
             </Box>

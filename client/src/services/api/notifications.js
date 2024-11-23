@@ -3,11 +3,16 @@ import { supabaseAdmin } from './adminClient';
 export const notificationService = {
   async sendWelcomeEmail(userData) {
     try {
-      const { error } = await supabaseAdmin.auth.admin.inviteUserByEmail(userData.email, {
-        data: {
-          first_name: userData.firstName,
-          last_name: userData.lastName,
-          role: userData.role
+      const { error } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'signup',
+        email: userData.email,
+        options: {
+          data: {
+            first_name: userData.firstName,
+            last_name: userData.lastName,
+            role: userData.role
+          },
+          redirectTo: `${window.location.origin}/set-password`
         }
       });
 
@@ -19,7 +24,7 @@ export const notificationService = {
     }
   },
 
-  // Other types of notifications here like password reset emails
+  // Other types of notifications here like password reset emails??? need to figure it out in supabase Edge functions
   async sendPasswordResetEmail(email) {
     try {
       const { error } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
