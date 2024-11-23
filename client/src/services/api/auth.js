@@ -78,6 +78,111 @@ export const authService = {
   
     onAuthStateChange(callback) {
       return supabase.auth.onAuthStateChange(callback);
-    }
-  };
+    },
+  
+    async register(userData) {
+        try {
+            // Explicitly destructure only the fields we want to send to Supabase
+            const { 
+                email, 
+                password, 
+                first_name,
+                last_name,
+                phone,
+                address,
+                city,
+                province,
+                postal_code
+            } = userData;
+            
+            console.log('Starting registration process with data:', { 
+                email, 
+                first_name, 
+                last_name 
+            });
+            
+            // Sign up the user
+            const { data: authData, error: signUpError } = await supabase.auth.signUp({
+                email,
+                password,
+                options: {
+                    data: {
+                        role: 'client'
+                    }
+                }
+            });
+
+            if (signUpError) {
+                console.error('Auth signup error:', signUpError);
+                throw signUpError;
+            }
+
+            console.log('Auth signup successful:', authData?.user?.id);
+
+            if (authData?.user) {
+                // Create the user profile with only the fields that exist in the profiles table
+                const newProfileData = {
+                    id: authData.user.id,
+                    first_name,
+                    last_name,
+                    phone,
+                    address,
+                    city,
+                    province,
+                    postal_code,
+                    role: 'client',
+                    is_active: true
+                };
+
+                console.log('Attempting to create profile with data:', newProfileData);
+
+                const { data: createdProfile, error: profileError } = await supabase
+                    .from('profiles')
+                    .insert([newProfileData])
+                    .select()
+                    .single();
+
+                if (profileError) {
+                    console.error('Profile creation error:', profileError);
+                    // If profile creation fails, we should probably delete the auth user
+                    await supabase.auth.admin.deleteUser(authData.user.id);
+                    throw profileError;
+                }
+
+                console.log('Profile created successfully:', createdProfile);
+                return { user: authData.user, profile: createdProfile };
+            }
+            
+            return null;
+        } catch (error) {
+            console.error('Registration process error:', error);
+            throw error;
+        }
+    },
+  
+    async resetPassword(email) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/reset-password`,
+        });
+        
+        if (error) throw error;
+        return true;
+    },
+  
+    async getUserRoleById(userId) {
+        try {
+            const { data: profile, error } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', userId)
+                .single();
+
+            if (error) throw error;
+            return profile;
+        } catch (error) {
+            console.error('Error fetching user role:', error);
+            throw error;
+        }
+    },
+};
 

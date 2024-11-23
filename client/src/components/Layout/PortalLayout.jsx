@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import { Box, Container, Paper } from '@mui/material';
+import { Box, Container } from '@mui/material';
 import { useTheme } from '@/hooks/useTheme';
 
 const PortalLayout = ({ children }) => {
@@ -15,16 +15,16 @@ const PortalLayout = ({ children }) => {
       }}
     >
       <Container maxWidth="lg">
-        <Paper
-          elevation={0}
+        <Box
           sx={{
             padding: theme.spacing(3),
             backgroundColor: theme.palette.background.paper,
-            borderRadius: theme.shape.borderRadius
+            borderRadius: theme.shape.borderRadius,
+            boxShadow: '0 1px 3px rgba(123, 176, 212, 0.12)',
           }}
         >
           {children}
-        </Paper>
+        </Box>
       </Container>
     </Box>
   );

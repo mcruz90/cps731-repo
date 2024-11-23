@@ -1,6 +1,9 @@
 import { supabaseAdmin } from './adminClient';
 import { notificationService } from './notifications';
 
+/*
+  Admin-specific database ops, so this uses supabaseAdmin rather than the regular supabase
+*/
 export const adminService = {
   async createUser(userData) {
     console.log('AdminService: createUser called with:', userData);

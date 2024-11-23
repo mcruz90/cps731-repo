@@ -11,48 +11,119 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  FormHelperText
 } from '@mui/material';
+import { 
+  validateEmail, 
+  validatePhone, 
+  validateRequired, 
+  validatePostalCode 
+} from '@/utils/validation';
 
 const EditUserDialog = ({ open, user, onClose, onSave }) => {
   const [formData, setFormData] = useState({
-    first_name: '',
-    last_name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     phone: '',
     role: '',
     address: '',
     city: '',
     province: '',
-    postal_code: ''
+    postalCode: '',
+    specializations: '',
+    startDate: '',
+    availabilityNotes: '',
+    isActive: true
   });
+
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
 
   useEffect(() => {
     if (user) {
       setFormData({
-        first_name: user.first_name || '',
-        last_name: user.last_name || '',
+        firstName: user.first_name || '',
+        lastName: user.last_name || '',
         email: user.email || '',
         phone: user.phone || '',
         role: user.role || '',
         address: user.address || '',
         city: user.city || '',
         province: user.province || '',
-        postal_code: user.postal_code || ''
+        postalCode: user.postal_code || '',
+        specializations: user.specializations || '',
+        startDate: user.start_date || '',
+        availabilityNotes: user.availability_notes || '',
+        isActive: user.is_active ?? true
       });
+      setErrors({});
+      setTouched({});
     }
   }, [user]);
 
+  const validateField = (name, value) => {
+    switch (name) {
+      case 'email':
+        return validateEmail(value);
+      case 'phone':
+        return validatePhone(value);
+      case 'firstName':
+      case 'lastName':
+      case 'role':
+        return validateRequired(value, name.replace('_', ' '));
+      case 'postalCode':
+        return value ? validatePostalCode(value) : '';
+      default:
+        return '';
+    }
+  };
+
   const handleChange = (field) => (event) => {
+    const newValue = event.target.value;
     setFormData(prev => ({
       ...prev,
-      [field]: event.target.value
+      [field]: newValue
     }));
+    
+    // Validate field if it's been touched
+    if (touched[field]) {
+      setErrors(prev => ({
+        ...prev,
+        [field]: validateField(field, newValue)
+      }));
+    }
+  };
+
+  const handleBlur = (field) => () => {
+    setTouched(prev => ({
+      ...prev,
+      [field]: true
+    }));
+    setErrors(prev => ({
+      ...prev,
+      [field]: validateField(field, formData[field])
+    }));
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    Object.keys(formData).forEach(field => {
+      const error = validateField(field, formData[field]);
+      if (error) {
+        newErrors[field] = error;
+      }
+    });
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(formData);
+    if (validateForm()) {
+      onSave(formData);
+    }
   };
 
   return (
@@ -65,8 +136,11 @@ const EditUserDialog = ({ open, user, onClose, onSave }) => {
               <TextField
                 fullWidth
                 label="First Name"
-                value={formData.first_name}
-                onChange={handleChange('first_name')}
+                value={formData.firstName}
+                onChange={handleChange('firstName')}
+                onBlur={handleBlur('firstName')}
+                error={!!errors.firstName}
+                helperText={errors.firstName}
                 required
               />
             </Grid>
@@ -74,8 +148,11 @@ const EditUserDialog = ({ open, user, onClose, onSave }) => {
               <TextField
                 fullWidth
                 label="Last Name"
-                value={formData.last_name}
-                onChange={handleChange('last_name')}
+                value={formData.lastName}
+                onChange={handleChange('lastName')}
+                onBlur={handleBlur('lastName')}
+                error={!!errors.lastName}
+                helperText={errors.lastName}
                 required
               />
             </Grid>
@@ -86,6 +163,9 @@ const EditUserDialog = ({ open, user, onClose, onSave }) => {
                 type="email"
                 value={formData.email}
                 onChange={handleChange('email')}
+                onBlur={handleBlur('email')}
+                error={!!errors.email}
+                helperText={errors.email}
                 required
               />
             </Grid>
@@ -95,22 +175,27 @@ const EditUserDialog = ({ open, user, onClose, onSave }) => {
                 label="Phone"
                 value={formData.phone}
                 onChange={handleChange('phone')}
+                onBlur={handleBlur('phone')}
+                error={!!errors.phone}
+                helperText={errors.phone}
                 required
               />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth required>
+              <FormControl fullWidth required error={!!errors.role}>
                 <InputLabel>Role</InputLabel>
                 <Select
                   value={formData.role}
                   label="Role"
                   onChange={handleChange('role')}
+                  onBlur={handleBlur('role')}
                 >
                   <MenuItem value="client">Client</MenuItem>
                   <MenuItem value="practitioner">Practitioner</MenuItem>
                   <MenuItem value="staff">Staff</MenuItem>
                   <MenuItem value="admin">Admin</MenuItem>
                 </Select>
+                {errors.role && <FormHelperText>{errors.role}</FormHelperText>}
               </FormControl>
             </Grid>
             <Grid item xs={12}>
@@ -141,8 +226,11 @@ const EditUserDialog = ({ open, user, onClose, onSave }) => {
               <TextField
                 fullWidth
                 label="Postal Code"
-                value={formData.postal_code}
-                onChange={handleChange('postal_code')}
+                value={formData.postalCode}
+                onChange={handleChange('postalCode')}
+                onBlur={handleBlur('postalCode')}
+                error={!!errors.postalCode}
+                helperText={errors.postalCode}
               />
             </Grid>
           </Grid>

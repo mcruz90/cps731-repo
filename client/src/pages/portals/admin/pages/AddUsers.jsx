@@ -19,75 +19,49 @@ import { adminService } from '@/services/api/admin';
 import { Link } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import PortalLayout from '@/components/Layout/PortalLayout';
+import { useFormValidation } from '@/hooks/useFormValidation';
+import FormField from '@/components/UI/FormField';
 
 const AddUsers = () => {
-  const [formData, setFormData] = useState({
-    // Basic Information
+  const initialValues = {
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
     role: '',
     password: '',
-    
-    // Address Information
     address: '',
     city: '',
     province: '',
     postalCode: '',
-    
-    // Professional Information
     emergencyContact: '',
-    specializations: '', 
+    specializations: '',
     availability: '',
     startDate: '',
-    
-    // Additional Settings
-    sendWelcomeEmail: true,
-    requirePasswordChange: true
+  };
+
+  const {
+    values,
+    errors,
+    handleChange,
+    handleBlur,
+    handleSubmit,
+    resetForm
+  } = useFormValidation(initialValues, {
+    isStaffRegistration: true,
   });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleAddUser = async (e) => {
-    e.preventDefault();
-    setError(null);
+  const onSubmit = async (formData) => {
     setLoading(true);
-
     try {
       const result = await adminService.createUser(formData);
       console.log('User created successfully:', result);
-      
       setSuccess(true);
-      
-      setFormData({
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        role: '',
-        password: '',
-        address: '',
-        city: '',
-        province: '',
-        postalCode: '',
-        emergencyContact: '',
-        specializations: '',
-        availability: '',
-        startDate: '',
-        sendWelcomeEmail: true,
-        requirePasswordChange: true
-      });
+      resetForm();
     } catch (err) {
       console.error('Error in handleAddUser:', err);
       setError(err.message || 'Failed to create user');
@@ -114,40 +88,43 @@ const AddUsers = () => {
             Add New Staff Member
           </Typography>
           
-          <form onSubmit={handleAddUser}>
+          <form onSubmit={(e) => handleSubmit(e, onSubmit)}>
             <Box sx={{ mb: 4 }}>
               <Typography variant="h6" color="primary" gutterBottom>
                 Basic Information
               </Typography>
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}>
-                  <TextField
-                    label="First Name"
+                  <FormField
                     name="firstName"
-                    value={formData.firstName}
+                    label="First Name"
+                    value={values.firstName}
                     onChange={handleChange}
-                    fullWidth
+                    onBlur={handleBlur}
+                    error={errors.firstName}
                     required
                   />
                 </Grid>
                 <Grid item xs={12} sm={6}>
-                  <TextField
-                    label="Last Name"
+                  <FormField
                     name="lastName"
-                    value={formData.lastName}
+                    label="Last Name"
+                    value={values.lastName}
                     onChange={handleChange}
-                    fullWidth
+                    onBlur={handleBlur}
+                    error={errors.lastName}
                     required
                   />
                 </Grid>
                 <Grid item xs={12} sm={6}>
-                  <TextField
-                    label="Email"
+                  <FormField
                     name="email"
+                    label="Email"
                     type="email"
-                    value={formData.email}
+                    value={values.email}
                     onChange={handleChange}
-                    fullWidth
+                    onBlur={handleBlur}
+                    error={errors.email}
                     required
                   />
                 </Grid>
@@ -155,7 +132,7 @@ const AddUsers = () => {
                   <TextField
                     label="Phone"
                     name="phone"
-                    value={formData.phone}
+                    value={values.phone}
                     onChange={handleChange}
                     fullWidth
                     required
@@ -166,7 +143,7 @@ const AddUsers = () => {
                     <InputLabel>Role</InputLabel>
                     <Select
                       name="role"
-                      value={formData.role}
+                      value={values.role}
                       onChange={handleChange}
                       label="Role"
                     >
@@ -181,7 +158,7 @@ const AddUsers = () => {
                     label="Temporary Password"
                     name="password"
                     type="password"
-                    value={formData.password}
+                    value={values.password}
                     onChange={handleChange}
                     fullWidth
                     required
@@ -201,7 +178,7 @@ const AddUsers = () => {
                   <TextField
                     label="Street Address"
                     name="address"
-                    value={formData.address}
+                    value={values.address}
                     onChange={handleChange}
                     fullWidth
                     required
@@ -211,7 +188,7 @@ const AddUsers = () => {
                   <TextField
                     label="City"
                     name="city"
-                    value={formData.city}
+                    value={values.city}
                     onChange={handleChange}
                     fullWidth
                     required
@@ -222,7 +199,7 @@ const AddUsers = () => {
                     <InputLabel>Province</InputLabel>
                     <Select
                       name="province"
-                      value={formData.province}
+                      value={values.province}
                       onChange={handleChange}
                       label="Province"
                     >
@@ -237,7 +214,7 @@ const AddUsers = () => {
                   <TextField
                     label="Postal Code"
                     name="postalCode"
-                    value={formData.postalCode}
+                    value={values.postalCode}
                     onChange={handleChange}
                     fullWidth
                     required
@@ -248,7 +225,7 @@ const AddUsers = () => {
 
             <Divider sx={{ my: 3 }} />
 
-            {(formData.role === 'staff' || formData.role === 'practitioner') && (
+            {(values.role === 'staff' || values.role === 'practitioner') && (
               <Box sx={{ mb: 4 }}>
                 <Typography variant="h6" color="primary" gutterBottom>
                   Professional Information
@@ -259,7 +236,7 @@ const AddUsers = () => {
                       label="Start Date"
                       name="startDate"
                       type="date"
-                      value={formData.startDate}
+                      value={values.startDate}
                       onChange={handleChange}
                       fullWidth
                       required
@@ -273,7 +250,7 @@ const AddUsers = () => {
                     <TextField
                       label="Availability Notes"
                       name="availabilityNotes"
-                      value={formData.availabilityNotes}
+                      value={values.availabilityNotes}
                       onChange={handleChange}
                       fullWidth
                       multiline
@@ -281,12 +258,12 @@ const AddUsers = () => {
                     />
                   </Grid>
 
-                  {formData.role === 'practitioner' && (
+                  {values.role === 'practitioner' && (
                     <Grid item xs={12}>
                       <TextField
                         label="Specializations"
                         name="specializations"
-                        value={formData.specializations}
+                        value={values.specializations}
                         onChange={handleChange}
                         fullWidth
                         multiline

@@ -14,11 +14,32 @@ import { useAuth } from '@/hooks/useAuth';
 import { styled } from '@mui/material/styles';
 import CartButton from './CartButton';
 
-const NavLink = styled(Link)({
-  color: 'inherit',
+const NavLink = styled(Link)(({ theme }) => ({
+  color: theme.palette.text.primary,
   textDecoration: 'none',
-  marginLeft: '1rem'
-});
+  marginLeft: '1rem',
+  transition: 'color 0.2s ease-in-out',
+  '&:hover': {
+    color: theme.palette.primary.main,
+  }
+}));
+
+const StyledButton = styled(Button)(({ theme }) => ({
+  color: theme.palette.text.primary,
+  fontWeight: 500,
+  '&:hover': {
+    color: theme.palette.primary.main,
+    backgroundColor: 'rgba(123, 176, 212, 0.08)',
+  },
+  '&.register-btn': {
+    backgroundColor: theme.palette.primary.main,
+    color: theme.palette.common.white,
+    '&:hover': {
+      backgroundColor: theme.palette.primary.dark,
+      color: theme.palette.common.white,
+    }
+  }
+}));
 
 const Navbar = () => {
   const { isAuthenticated, userRole, logout, loadingState } = useAuth();
@@ -35,63 +56,39 @@ const Navbar = () => {
     }
   };
 
-  // Render different navigation items based on authentication and role
   const renderNavItems = () => {
     if (!isAuthenticated) {
       return (
         <>
-          <Button 
+          <StyledButton 
             component={NavLink} 
-            to="/login" 
-            color="inherit"
+            to="/login"
           >
             Login
-          </Button>
-          <Button 
+          </StyledButton>
+          <StyledButton 
             component={NavLink} 
-            to="/register" 
-            color="inherit"
+            to="/register"
+            className="register-btn"
           >
             Register
-          </Button>
+          </StyledButton>
         </>
       );
     }
 
-    // Role-specific navigation
-    const roleRoutes = {
-      client: '/client',
-      practitioner: '/practitioner',
-      admin: '/admin',
-      staff: '/staff'
-    };
 
     return (
       <Box sx={{ display: 'flex', alignItems: 'center' }}>
-        <Button 
+        
+        <StyledButton 
           component={NavLink} 
-          to={roleRoutes[userRole] || '/'} 
-          color="inherit"
-        >
-          Dashboard
-        </Button>
-        <Button 
-          component={NavLink} 
-          to="/profile" 
-          color="inherit"
-        >
-          Profile
-        </Button>
-        <Button 
-          component={NavLink} 
-          to="/about" 
-          color="inherit"
+          to="/about"
         >
           About
-        </Button>
-        {userRole === 'client' && <CartButton />} {/* Only show for clients */}
-        <Button 
-          color="inherit" 
+        </StyledButton>
+        {userRole === 'client' && <CartButton />}
+        <StyledButton 
           onClick={handleLogout}
           disabled={loadingState?.logout}
           sx={{ 
@@ -105,20 +102,33 @@ const Navbar = () => {
           ) : (
             'Logout'
           )}
-        </Button>
+        </StyledButton>
       </Box>
     );
   };
 
   return (
     <>
-      <AppBar position="static">
+      <AppBar 
+        position="static" 
+        sx={{ 
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          boxShadow: '0 2px 4px rgba(123, 176, 212, 0.1)',
+        }}
+      >
         <Toolbar>
           <Typography 
             variant="h6" 
             component={NavLink} 
             to="/" 
-            sx={{ flexGrow: 1 }}
+            sx={{ 
+              flexGrow: 1,
+              fontWeight: 600,
+              color: (theme) => theme.palette.primary.main,
+              '&:hover': {
+                color: (theme) => theme.palette.primary.dark,
+              }
+            }}
           >
             Serenity
           </Typography>
@@ -126,7 +136,6 @@ const Navbar = () => {
         </Toolbar>
       </AppBar>
 
-      {/* Error Snackbar */}
       <Snackbar 
         open={!!error} 
         autoHideDuration={6000} 

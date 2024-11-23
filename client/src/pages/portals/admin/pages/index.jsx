@@ -1,4 +1,5 @@
-import { Routes, Route, Link } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
+import PortalNav from '@/components/Layout/PortalNav';
 import Dashboard from './Dashboard';
 import AddUsers from './AddUsers';
 import Profile from './Profile';
@@ -7,16 +8,18 @@ import Products from './Products';
 import Reports from './Reports';
 
 const AdminPortal = () => {
+  const navLinks = [
+    { to: '/admin', label: 'Dashboard' },
+    { to: '/admin/products', label: 'Products' },
+    { to: '/admin/profile', label: 'Profile' },
+    { to: '/admin/users', label: 'Users' },
+    { to: '/admin/add-users', label: 'Add Users' },
+  ];
+
   return (
     <>
-      <nav style={{ marginBottom: '20px', display: 'flex', gap: '20px', padding: '10px' }}>
-        <Link to="" style={{ marginRight: '20px' }}>Dashboard</Link>
-        <Link to="products" style={{ marginRight: '20px' }}>Products</Link>
-        <Link to="profile" style={{ marginRight: '20px' }}>Profile</Link>
-        <Link to="users" style={{ marginRight: '20px' }}>Users</Link>
-        <Link to="add-users" style={{ marginRight: '20px' }}>Add Users</Link>
-      </nav>
-
+      <PortalNav links={navLinks} />
+      
       <Routes>
         <Route index element={<Dashboard />} />
         <Route path="add-users" element={<AddUsers />} />

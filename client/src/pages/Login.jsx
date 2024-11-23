@@ -1,95 +1,61 @@
 import { useState } from 'react';
 import { 
     Box, 
-    TextField, 
     Button, 
     CircularProgress, 
-    Tabs,
-    Tab,
     Alert,
+    AlertTitle,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Link as MuiLink,
+    Typography,
 } from '@mui/material';
-import Grid from '@mui/material/Grid2';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
-import { supabase } from '@/services/api';
+import { useFormValidation } from '@/hooks/useFormValidation';
+import { FormField } from '@/components/UI/FormField';
+import { authService } from '@/services/api/auth';
 
 export default function Login() {
     console.log('Login component rendering');
 
     const navigate = useNavigate();
-    const { login, error, loadingState } = useAuth();
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [formErrors, setFormErrors] = useState({});
-    const [isRegistering, setIsRegistering] = useState(false);
-    const [registrationData, setRegistrationData] = useState({
-        firstName: '',
-        lastName: '',
-        phone: '',
-        address: '',
-        city: '',
-        province: '',
-        postalCode: ''
+    const { login, error: authError, loadingState } = useAuth();
+    const [resetDialogOpen, setResetDialogOpen] = useState(false);
+    const [resetEmail, setResetEmail] = useState('');
+    const [resetStatus, setResetStatus] = useState({ success: false, error: null });
+    const [isResetting, setIsResetting] = useState(false);
+
+    const {
+        values,
+        errors,
+        handleChange,
+        handleBlur,
+        validateForm,
+        isSubmitted,
+        setErrors
+    } = useFormValidation({
+        email: '',
+        password: '',
+    }, {
+        isRegistering: false
     });
 
-    const validateForm = () => {
-        const errors = {};
-        if (!email) {
-            errors.email = 'Email is required';
-        } else if (!/\S+@\S+\.\S+/.test(email)) {
-            errors.email = 'Email is invalid';
-        }
-        if (!password) {
-            errors.password = 'Password is required';
-        }
-        if (isRegistering) {
-            if (!confirmPassword) {
-                errors.confirmPassword = 'Please confirm your password';
-            } else if (password !== confirmPassword) {
-                errors.confirmPassword = 'Passwords do not match';
-            }
-        }
-        setFormErrors(errors);
-        return Object.keys(errors).length === 0;
-    };
-
-    const validateRegistrationForm = () => {
-        const errors = {};
-        if (!email) errors.email = 'Email is required';
-        if (!password) errors.password = 'Password is required';
-        if (password !== confirmPassword) {
-            errors.confirmPassword = 'Passwords do not match';
-        }
-        if (isRegistering) {
-            if (!registrationData.firstName) errors.firstName = 'First name is required';
-            if (!registrationData.lastName) errors.lastName = 'Last name is required';
-            if (!registrationData.phone) errors.phone = 'Phone number is required';
-            if (!registrationData.address) errors.address = 'Address is required';
-            if (!registrationData.city) errors.city = 'City is required';
-            if (!registrationData.province) errors.province = 'Province is required';
-            if (!registrationData.postalCode) errors.postalCode = 'Postal code is required';
-        }
-        setFormErrors(errors);
-        return Object.keys(errors).length === 0;
-    };
-
-    const handleLogin = async (e) => {
+    const handleLoginSubmit = async (e) => {
         e.preventDefault();
-        if (!validateForm()) return;
+        
+        const isValid = validateForm();
+        if (!isValid) return;
 
         try {
-            const result = await login(email, password);
+            const result = await login(values.email, values.password);
             if (result?.user) {
-                // Check user role and navigate accordingly
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('role')
-                    .eq('id', result.user.id)
-                    .single();
+                const profile = await authService.getUserRoleById(result.user.id);
 
-                // Navigate based on role to the appropriate portal
                 switch (profile?.role) {
                     case 'client':
                         navigate('/client');
@@ -107,275 +73,203 @@ export default function Login() {
                         navigate('/');
                 }
             }
-        } catch (error) {
-            setFormErrors(prev => ({
+        } catch (err) {
+            console.error('Login error:', err);
+            setErrors(prev => ({
                 ...prev,
-                password: error.message.includes('credentials') ? 'Invalid email or password' : '',
-                email: error.message.includes('not found') ? 'User not found' : ''
+                form: err.message
             }));
         }
     };
 
-    const handleRegister = async (e) => {
+    const handleResetPassword = async (e) => {
         e.preventDefault();
-        if (!validateRegistrationForm()) return;
+        setIsResetting(true);
+        setResetStatus({ success: false, error: null });
 
         try {
-            // First, sign up the user
-            const { data: authData, error: signUpError } = await supabase.auth.signUp({
-                email,
-                password,
-                options: {
-                    data: {
-                        role: 'client'
-                    }
-                }
+            await authService.resetPassword(resetEmail);
+            setResetStatus({ 
+                success: true, 
+                error: null 
             });
-
-            if (signUpError) throw signUpError;
-
-            // Then create their profile with the registration data
-            if (authData?.user) {
-                const { error: profileError } = await supabase
-                    .from('profiles')
-                    .insert([
-                        {
-                            id: authData.user.id,
-                            first_name: registrationData.firstName,
-                            last_name: registrationData.lastName,
-                            phone: registrationData.phone,
-                            address: registrationData.address,
-                            city: registrationData.city,
-                            province: registrationData.province,
-                            postal_code: registrationData.postalCode,
-                            role: 'client'
-                        }
-                    ]);
-
-                if (profileError) throw profileError;
-
-                // Navigate to success or login page
-                navigate('/client');
-            }
-        } catch (error) {
-            console.error('Registration error:', error);
-            setFormErrors(prev => ({
-                ...prev,
-                submit: error.message
-            }));
+           
+        } catch (err) {
+            console.error('Password reset error:', err);
+            setResetStatus({ 
+                success: false, 
+                error: err.message || 'Failed to send reset email' 
+            });
+        } finally {
+            setIsResetting(false);
         }
+    };
+
+    const handleCloseResetDialog = () => {
+        setResetDialogOpen(false);
+        setResetEmail('');
+        setResetStatus({ success: false, error: null });
     };
 
     return (
         <Box sx={{ maxWidth: 600, mx: 'auto', mt: 4, p: 2 }}>
-            {error && (
+            <Typography 
+                variant="h4" 
+                component="h1" 
+                gutterBottom
+                textAlign="center"
+            >
+                Sign In
+            </Typography>
+
+            {authError && (
                 <Alert severity="error" sx={{ mb: 2 }}>
-                    {error}
+                    <AlertTitle>Login Failed</AlertTitle>
+                    Invalid email or password
                 </Alert>
             )}
-            
-            <Tabs
-                value={isRegistering ? 1 : 0}
-                onChange={(_, newValue) => {
-                    setIsRegistering(!!newValue);
-                    setFormErrors({});
-                    setEmail('');
-                    setPassword('');
-                    setConfirmPassword('');
-                }}
-                sx={{ mb: 2 }}
-            >
-                <Tab label="Login" />
-                <Tab label="Register" />
-            </Tabs>
 
             <Box 
                 component="form" 
-                onSubmit={isRegistering ? handleRegister : handleLogin}
-                sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+                onSubmit={handleLoginSubmit}
+                sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: 2 
+                }}
             >
-                <TextField 
-                    label="Email" 
-                    variant="outlined" 
-                    fullWidth 
-                    value={email}
-                    onChange={(e) => {
-                        setEmail(e.target.value);
-                        if (formErrors.email) {
-                            setFormErrors(prev => ({ ...prev, email: '' }));
-                        }
-                    }}
-                    margin="normal"
-                    disabled={loadingState.login}
-                    error={!!formErrors.email}
-                    helperText={formErrors.email}
+                <FormField
+                    name="email"
+                    label="Email"
+                    value={values.email}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    error={isSubmitted ? errors.email : undefined}
                     type="email"
                     required
-                    autoComplete="email"
                 />
-                
-                <TextField 
-                    label="Password" 
-                    variant="outlined" 
-                    fullWidth 
-                    type="password"
-                    value={password}
-                    onChange={(e) => {
-                        setPassword(e.target.value);
-                        if (formErrors.password) {
-                            setFormErrors(prev => ({ ...prev, password: '' }));
-                        }
-                    }}
-                    margin="normal"
-                    disabled={loadingState.login}
-                    error={!!formErrors.password}
-                    helperText={formErrors.password}
-                    required
-                    autoComplete="current-password"
-                />
-                
-                {isRegistering && (
-                    <TextField 
-                        label="Confirm Password" 
-                        variant="outlined" 
-                        fullWidth 
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(e) => {
-                            setConfirmPassword(e.target.value);
-                            if (formErrors.confirmPassword) {
-                                setFormErrors(prev => ({ ...prev, confirmPassword: '' }));
-                            }
-                        }}
-                        margin="normal"
-                        disabled={loadingState.login}
-                        error={!!formErrors.confirmPassword}
-                        helperText={formErrors.confirmPassword}
-                        required
-                        autoComplete="new-password"
-                    />
-                )}
 
-                {isRegistering && (
-                    <Grid container spacing={2}>
-                        <Grid item xs={12} sm={6}>
-                            <TextField 
-                                label="First Name"
-                                fullWidth
-                                value={registrationData.firstName}
-                                onChange={(e) => setRegistrationData(prev => ({
-                                    ...prev,
-                                    firstName: e.target.value
-                                }))}
-                                error={!!formErrors.firstName}
-                                helperText={formErrors.firstName}
-                                required
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField 
-                                label="Last Name"
-                                fullWidth
-                                value={registrationData.lastName}
-                                onChange={(e) => setRegistrationData(prev => ({
-                                    ...prev,
-                                    lastName: e.target.value
-                                }))}
-                                error={!!formErrors.lastName}
-                                helperText={formErrors.lastName}
-                                required
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField 
-                                label="Phone"
-                                fullWidth
-                                value={registrationData.phone}
-                                onChange={(e) => setRegistrationData(prev => ({
-                                    ...prev,
-                                    phone: e.target.value
-                                }))}
-                                error={!!formErrors.phone}
-                                helperText={formErrors.phone}
-                                required
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField 
-                                label="Address"
-                                fullWidth
-                                value={registrationData.address}
-                                onChange={(e) => setRegistrationData(prev => ({
-                                    ...prev,
-                                    address: e.target.value
-                                }))}
-                                error={!!formErrors.address}
-                                helperText={formErrors.address}
-                                required
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField 
-                                label="City"
-                                fullWidth
-                                value={registrationData.city}
-                                onChange={(e) => setRegistrationData(prev => ({
-                                    ...prev,
-                                    city: e.target.value
-                                }))}
-                                error={!!formErrors.city}
-                                helperText={formErrors.city}
-                                required
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField 
-                                label="Province"
-                                fullWidth
-                                value={registrationData.province}
-                                onChange={(e) => setRegistrationData(prev => ({
-                                    ...prev,
-                                    province: e.target.value
-                                }))}
-                                error={!!formErrors.province}
-                                helperText={formErrors.province}
-                                required
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField 
-                                label="Postal Code"
-                                fullWidth
-                                value={registrationData.postalCode}
-                                onChange={(e) => setRegistrationData(prev => ({
-                                    ...prev,
-                                    postalCode: e.target.value
-                                }))}
-                                error={!!formErrors.postalCode}
-                                helperText={formErrors.postalCode}
-                                required
-                            />
-                        </Grid>
-                    </Grid>
-                )}
+                <FormField
+                    name="password"
+                    label="Password"
+                    value={values.password}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    error={isSubmitted ? errors.password : undefined}
+                    type="password"
+                    required
+                />
+
+                <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    mt: 1,
+                    mb: 2
+                }}>
+                    <MuiLink
+                        component={Link}
+                        variant="body2"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            setResetDialogOpen(true);
+                        }}
+                    >
+                        Forgot Password?
+                    </MuiLink>
+                </Box>
 
                 <Button 
                     type="submit" 
                     variant="contained" 
                     color="primary"
                     fullWidth
-                    disabled={loadingState.login || loadingState.profile}
-                    sx={{ mt: 2 }}
+                    disabled={loadingState.login}
+                    sx={{ 
+                        mt: 2,
+                        position: 'relative',
+                        '&.Mui-disabled': {
+                            backgroundColor: 'action.disabledBackground'
+                        }
+                    }}
                 >
                     {loadingState.login ? (
                         <CircularProgress size={24} color="inherit" />
-                    ) : loadingState.profile ? (
-                        'Loading Profile...'
                     ) : (
-                        isRegistering ? 'Register' : 'Login'
+                        'Login'
                     )}
                 </Button>
             </Box>
+
+            <Box sx={{ 
+                mt: 3, 
+                textAlign: 'center' 
+            }}>
+                <Typography variant="body2">
+                    Don&apos;t have an account?{' '}
+                    <MuiLink 
+                        component={Link} 
+                        to="/register"
+                        underline="hover"
+                    >
+                        Sign up
+                    </MuiLink>
+                </Typography>
+            </Box>
+
+            {/* Password Reset Dialog */}
+            <Dialog 
+                open={resetDialogOpen} 
+                onClose={handleCloseResetDialog}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle>
+                    Reset Password
+                </DialogTitle>
+                <DialogContent>
+                    {resetStatus.error && (
+                        <Alert severity="error" sx={{ mb: 2 }}>
+                            {resetStatus.error}
+                        </Alert>
+                    )}
+                    {resetStatus.success ? (
+                        <Alert severity="success" sx={{ mb: 2 }}>
+                            We have sent password reset instructions to the email provided, if it is associated with an account.
+                        </Alert>
+                    ) : (
+                        <Box component="form" onSubmit={handleResetPassword}>
+                            <FormField
+                                name="resetEmail"
+                                label="Email"
+                                type="email"
+                                value={resetEmail}
+                                onChange={(e) => setResetEmail(e.target.value)}
+                                required
+                                autoFocus
+                            />
+                        </Box>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseResetDialog}>
+                        {resetStatus.success ? 'Close' : 'Cancel'}
+                    </Button>
+                    {!resetStatus.success && (
+                        <Button 
+                            onClick={handleResetPassword}
+                            disabled={isResetting}
+                            variant="contained"
+                        >
+                            {isResetting ? (
+                                <CircularProgress size={24} color="inherit" />
+                            ) : (
+                                'Send Reset Link'
+                            )}
+                        </Button>
+                    )}
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 }
