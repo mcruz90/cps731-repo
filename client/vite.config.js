@@ -6,9 +6,6 @@ import { dirname } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// Get port from environment variable or default to 3000
-const port = import.meta.env.PORT || 3000;
-
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -16,12 +13,8 @@ export default defineConfig({
       '@': path.resolve(__dirname, 'src'),
     },
   },
-  server: {
-    host: true,
-    port: port
-  },
-  preview: {
-    host: true,
-    port: port
+  build: {
+    outDir: 'dist',
+    sourcemap: false
   }
 });
