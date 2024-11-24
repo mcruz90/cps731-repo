@@ -65,6 +65,9 @@ import PractitionerSelection from './PractitionerSelection';
 import ConfirmDetails from './ConfirmDetails';
 import { useNavigate } from 'react-router-dom';
 
+// PAYMENT GATEWAY
+import { PaymentGateway } from '@/services/api/payment';
+
 // Custom Tab Panel Component to let user toggle between each stage of the booking process
 function TabPanel({ children, value, index, ...other }) {
   return (
@@ -176,14 +179,29 @@ export default function BookAppointment() {
   const handleConfirmBooking = async (finalFormData) => {
     setLoading(true);
     try {
-      const appointmentData = {
-        ...finalFormData,
-        client_id: user?.id // Add user ID from auth so they're connected to this specific appointment
-      };
+
+      //payment process here
+      const paymentResult = await PaymentGateway.processPayment({
+        amount: finalFormData.price,
+        currency: finalFormData.payment.currency,
+        paymentMethod: finalFormData.payment.paymentMethod,
+        billingDetails: finalFormData.payment.billingDetails
+      });
+
+      // If payment is successful, create appointment
+      if (paymentResult.success) {
+        const appointmentData = {
+          ...finalFormData,
+          client_id: user?.id,
+          payment_id: paymentResult.paymentId
+        };
       
-      await BookingService.createAppointment(appointmentData);
-      setSuccess(true);
-      navigate('/appointments');
+        await BookingService.createAppointment(appointmentData);
+        setSuccess(true);
+        navigate('/appointments');
+      } else {
+        setError('Payment failed. Please try again.');
+      }
     } catch (err) {
       console.error('Error creating appointment:', err);
       setError('Failed to create appointment. Please try again.');

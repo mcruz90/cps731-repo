@@ -13,11 +13,21 @@ import {
   List,
   ListItem,
   ListItemText,
-  CircularProgress,
   Alert
 } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 import { format } from 'date-fns';
+
+// PAYPAL INTEGRATION
+import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
+
+// STRIPE INTEGRATION
+import { Elements } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
+import PaymentForm from './components/checkout/PaymentForm';
+
+// Load Stripe
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 export default function ConfirmDetails({ 
   formData,
@@ -27,9 +37,29 @@ export default function ConfirmDetails({
 }) {
   const [notes, setNotes] = useState(formData.notes || '');
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onConfirm({ ...formData, notes });
+  // PAYMENT/STRIPE INTEGRATION
+  const [paymentStep, setPaymentStep] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState(null);
+
+  const handlePaymentSubmit = async (paymentData) => {
+    try {
+      const allAppointmentData = {
+        ...formData,
+        notes,
+        payment: {
+          ...paymentData,
+          amount: formData.price,
+          currency: 'CAD'
+        }
+      };
+      await onConfirm(allAppointmentData);
+    } catch (error) {
+      console.error('Error submitting payment:', error);
+    }
+  };
+
+  const handleInitialConfirm = () => {
+    setPaymentStep(true);
   };
 
   // Helper function to format currency
@@ -41,130 +71,206 @@ export default function ConfirmDetails({
   };
 
   return (
-    <Box component="form" onSubmit={handleSubmit}>
-      <Typography variant="h6" gutterBottom>
-        Confirm Booking Details
-      </Typography>
+    <Box>
+      {!paymentStep ? (
+        <Box component="form" onSubmit={handleInitialConfirm}>
+          <Typography variant="h6" gutterBottom>
+            Confirm Booking Details
+          </Typography>
 
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Grid container spacing={3}>
-          {/* Service Details */}
-          <Grid item xs={12}>
-            <Typography variant="subtitle1" color="primary" gutterBottom>
-              Service
-            </Typography>
-            <List dense>
-              <ListItem>
-                <ListItemText 
-                  primary={formData.serviceName}
-                  secondary={`Duration: ${formData.duration} minutes`}
-                />
-              </ListItem>
-            </List>
-          </Grid>
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Grid container spacing={3}>
+              {/* Service Details */}
+              <Grid item xs={12}>
+                <Typography variant="subtitle1" color="primary" gutterBottom>
+                  Service
+                </Typography>
+                <List dense>
+                  <ListItem>
+                    <ListItemText 
+                      primary={formData.serviceName}
+                      secondary={`Duration: ${formData.duration} minutes`}
+                    />
+                  </ListItem> 
+                </List>
+              </Grid>
 
-          <Grid item xs={12}>
-            <Divider />
-          </Grid>
+              <Grid item xs={12}>
+                <Divider />
+              </Grid>
 
-          {/* Date and Time */}
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle1" color="primary" gutterBottom>
-              Date & Time
-            </Typography>
-            <List dense>
-              <ListItem>
+              {/* Date and Time */}
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle1" color="primary" gutterBottom>
+                  Date & Time
+                </Typography>
+                <List dense>
+                <ListItem>
                 <ListItemText 
                   primary={formData.date ? format(formData.date, 'EEEE, MMMM d, yyyy') : 'Not selected'}
                   secondary={formData.time ? format(new Date(`2000-01-01T${formData.time}`), 'h:mm a') : 'Not selected'}
+                    />
+                  </ListItem>
+                </List>
+              </Grid>
+
+              {/* Practitioner */}
+              <Grid item xs={12} sm={6}>
+                <Typography variant="subtitle1" color="primary" gutterBottom>
+                  Healthcare Provider
+                </Typography>
+                <List dense>
+                  <ListItem>
+                    <ListItemText 
+                      primary={formData.practitionerName}
+                    />
+                  </ListItem>
+                </List>
+              </Grid>
+
+              <Grid item xs={12}>
+                <Divider />
+              </Grid>
+
+              {/* Notes */}
+              <Grid item xs={12}>
+                <Typography variant="subtitle1" color="primary" gutterBottom>
+                  Additional Notes
+                </Typography>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={4}
+                  placeholder="Add any special requests or notes for your appointment..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  variant="outlined"
                 />
-              </ListItem>
-            </List>
-          </Grid>
+              </Grid>
 
-          {/* Practitioner */}
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle1" color="primary" gutterBottom>
-              Healthcare Provider
+              {error && (
+                <Grid item xs={12}>
+                  <Alert severity="error">
+                    {error}
+                  </Alert>
+                </Grid>
+              )}
+            </Grid>
+          </Paper>
+
+          {/* Booking Summary */}
+          <Paper sx={{ p: 3, mb: 3, bgcolor: 'primary.light' }}>
+            <Typography variant="subtitle1" color="primary.contrastText" gutterBottom>
+              Booking Summary
             </Typography>
-            <List dense>
-              <ListItem>
-                <ListItemText 
-                  primary={formData.practitionerName}
-                />
-              </ListItem>
-            </List>
-          </Grid>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between',
+                  color: 'primary.contrastText'
+                }}>
+                  <Typography variant="body1">
+                    {formData.serviceName}
+                  </Typography>
+                  <Typography variant="body1">
+                    {formatCurrency(formData.price || 0)}
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+          </Paper>
 
-          <Grid item xs={12}>
-            <Divider />
-          </Grid>
+          {/* Submit Button */}
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Button
+              type="submit"
+              variant="contained"
+              size="large"
+              disabled={loading}
+              sx={{ minWidth: 200 }}
+            >
+              Proceed to Payment
+            </Button>
+          </Box>
+        </Box>
+      ) : (
+        // STRIPE INTEGRATION - PAYMENT FORM
+        <Box>
+          <Typography variant="h6" gutterBottom>
+            Payment Information
+          </Typography>
 
-          {/* Notes */}
-          <Grid item xs={12}>
-            <Typography variant="subtitle1" color="primary" gutterBottom>
-              Additional Notes
-            </Typography>
-            <TextField
-              fullWidth
-              multiline
-              rows={4}
-              placeholder="Add any special requests or notes for your appointment..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              variant="outlined"
-            />
-          </Grid>
+        {/* Payment method selection */}
+        <Box sx={{ mb: 3 }}>
+            <Button
+              variant={paymentMethod === 'card' ? 'contained' : 'outlined'}
+              onClick={() => setPaymentMethod('card')}
+              sx={{ mr: 2 }}
+            >
+              Pay with Card
+            </Button>
+            <Button
+              variant={paymentMethod === 'paypal' ? 'contained' : 'outlined'}
+              onClick={() => setPaymentMethod('paypal')}
+            >
+              Pay with PayPal
+            </Button>
+          </Box>
+
+          {paymentMethod === 'card' && (
+            <Elements stripe={stripePromise}>
+              <PaymentForm
+                onSubmit={handlePaymentSubmit}
+                amount={formData.price}
+                loading={loading}
+              />
+            </Elements>
+          )}
+
+          {paymentMethod === 'paypal' && (
+                  <PayPalScriptProvider
+                    options={{
+                      //'client-id': 'your-paypal-client-id', // Addl PayPal client ID
+                      'client-id': import.meta.env.VITE_PAYPAL_CLIENT_ID,
+                      currency: 'USD',
+                    }}
+                  >
+                    <h2>Pay with PayPal</h2>
+                    <PayPalButtons
+                      style={{ layout: 'vertical' }}
+                      createOrder={(data, actions) => {
+                        return actions.order.create({
+                          purchase_units: [
+                            {
+                              amount: {
+                                value: '50.00', 
+                              },
+                            },
+                          ],
+                        });
+                      }}
+                      onApprove={(data, actions) => {
+                        return actions.order.capture().then((details) => {
+                          console.log('Transaction completed by: ', details.payer.name.given_name);
+                          alert('Payment Successful!');
+                        });
+                      }}
+                      onError={(err) => {
+                        console.error('PayPal Checkout Error: ', err);
+                        alert('Payment could not be completed. Please try again.');
+                      }}
+                    />
+                  </PayPalScriptProvider>
+                )}
 
           {error && (
-            <Grid item xs={12}>
-              <Alert severity="error">
-                {error}
-              </Alert>
-            </Grid>
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {error}
+            </Alert>
           )}
-        </Grid>
-      </Paper>
-
-      {/* Booking Summary */}
-      <Paper sx={{ p: 3, mb: 3, bgcolor: 'primary.light' }}>
-        <Typography variant="subtitle1" color="primary.contrastText" gutterBottom>
-          Booking Summary
-        </Typography>
-        <Grid container spacing={2}>
-          <Grid item xs={12}>
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'space-between',
-              color: 'primary.contrastText'
-            }}>
-              <Typography variant="body1">
-                {formData.serviceName}
-              </Typography>
-              <Typography variant="body1">
-                {formatCurrency(formData.price || 0)}
-              </Typography>
-            </Box>
-          </Grid>
-        </Grid>
-      </Paper>
-
-      {/* Submit Button */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <Button
-          type="submit"
-          variant="contained"
-          size="large"
-          disabled={loading}
-          sx={{ minWidth: 200 }}
-        >
-          {loading ? (
-            <CircularProgress size={24} color="inherit" />
-          ) : (
-            'Confirm Booking'
-          )}
-        </Button>
-      </Box>
+        </Box>
+      )}
     </Box>
   );
 }
