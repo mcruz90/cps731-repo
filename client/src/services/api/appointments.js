@@ -1,4 +1,16 @@
-import { supabase } from './index';
+import axios from 'axios';
+
+const API_URL = 'http://localhost:5000/api';
+
+export const fetchPractitionerAppointments = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/appointments/practitioner`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching practitioner appointments:', error);
+    throw error;
+  }
+};
 
 export const appointmentService = {
   // Get appointment details for a specific client and appointment
