@@ -1,32 +1,68 @@
-// Follow this setup guide to integrate the Deno language server with your editor:
-// https://deno.land/manual/getting_started/setup_your_environment
-// This enables autocomplete, go to definition, etc.
+import { Webhook } from 'https://esm.sh/standardwebhooks@1.0.0';
+import { Resend } from 'npm:resend@4.0.0';
+import React from 'npm:react@18.3.1';
+import { renderAsync } from 'npm:@react-email/components@0.0.22';
+import { MagicLinkEmail } from './_templates/magic-link.tsx';
 
-// Setup type definitions for built-in Supabase Runtime APIs
-import "jsr:@supabase/functions-js/edge-runtime.d.ts"
+const resend = new Resend(Deno.env.get('RESEND_API_KEY')!);
+const hookSecret = Deno.env.get('SEND_EMAIL_HOOK_SECRET')!;
 
-console.log("Hello from Functions!")
-
-Deno.serve(async (req) => {
-  const { name } = await req.json()
-  const data = {
-    message: `Hello ${name}!`,
+Deno.serve(async (req: Request) => {
+  if (req.method !== 'POST') {
+    return new Response('Method not allowed', { status: 405 });
   }
 
-  return new Response(
-    JSON.stringify(data),
-    { headers: { "Content-Type": "application/json" } },
-  )
-})
+  const payload = await req.text();
+  const headers = Object.fromEntries(req.headers);
+  const wh = new Webhook(hookSecret);
 
-/* To invoke locally:
+  try {
+    const { user, email_data } = wh.verify(payload, headers) as {
+      user: { email: string };
+      email_data: {
+        token: string;
+        token_hash: string;
+        redirect_to: string;
+        email_action_type: string;
+      };
+    };
 
-  1. Run `supabase start` (see: https://supabase.com/docs/reference/cli/supabase-start)
-  2. Make an HTTP request:
+    const html = await renderAsync(
+      React.createElement(MagicLinkEmail, {
+        supabase_url: Deno.env.get('SUPABASE_URL') ?? '',
+        ...email_data,
+      })
+    );
 
-  curl -i --location --request POST 'http://127.0.0.1:54321/functions/v1/send-email' \
-    --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0' \
-    --header 'Content-Type: application/json' \
-    --data '{"name":"Functions"}'
+    const subject = email_data.email_action_type === 'signup' 
+      ? 'Welcome to Your Wellness Center!' 
+      : 'Reset Your Password';
 
-*/
+    const { error } = await resend.emails.send({
+      from: 'Serenity Team <admin@serenitywellness.email>',
+      to: [user.email],
+      subject,
+      html,
+    });
+
+    if (error) throw error;
+
+    return new Response(JSON.stringify({}), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error: unknown) {
+    console.error('Error sending email:', error);
+    return new Response(
+      JSON.stringify({ 
+        error: { 
+          message: error instanceof Error ? error.message : 'Unknown error' 
+        } 
+      }),
+      {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  }
+});
