@@ -6,15 +6,13 @@ import {
   TableRow,
   TableCell,
   Typography,
-  Card,
-  CardContent,
   Button,
-  Box,
-  Chip,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
+  TextField,
+  Box,
 } from "@mui/material";
 import Grid from "@mui/material/Grid2";
 import { useNavigate } from "react-router-dom";
@@ -28,6 +26,14 @@ const Inventory = () => {
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingItem, setEditingItem] = useState(null);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+
+  const [newItem, setNewItem] = useState({
+    name: "",
+    description: "",
+    price: "",
+    quantity: "",
+  });
 
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -45,6 +51,18 @@ const Inventory = () => {
     }
   }, [user]);
 
+  const handleAddItem = async () => {
+    try {
+      const addedItem = await inventoryService.addInventoryItem(newItem);
+      setInventory((prev) => [...prev, addedItem]);
+      setAddDialogOpen(false);
+      setNewItem({ name: "", description: "", price: "", quantity: "" });
+    } catch (error) {
+      console.error("Error adding inventory item:", error);
+    }
+  };
+
+
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
@@ -56,6 +74,54 @@ const Inventory = () => {
       <Typography variant='h4' component='h1' gutterBottom>
         Inventory
       </Typography>
+
+      <Button variant="contained" onClick={() => setAddDialogOpen(true)}>Add New Item</Button>
+
+
+
+      <Dialog open={addDialogOpen} onClose={() => setAddDialogOpen(false)}>
+        <DialogTitle>Add New Inventory Item</DialogTitle>
+        <DialogContent>
+          <Box display="flex" flexDirection="column" gap={2}>
+            <TextField
+              label="Name"
+              value={newItem.name}
+              onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+            />
+            <TextField
+              label="Description"
+              value={newItem.description}
+              onChange={(e) =>
+                setNewItem({ ...newItem, description: e.target.value })
+              }
+            />
+            <TextField
+              label="Price"
+              type="number"
+              value={newItem.price}
+              onChange={(e) =>
+                setNewItem({ ...newItem, price: e.target.value })
+              }
+            />
+            <TextField
+              label="Quantity"
+              type="number"
+              value={newItem.quantity}
+              onChange={(e) =>
+                setNewItem({ ...newItem, quantity: e.target.value })
+              }
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAddDialogOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleAddItem}>
+            Add Item
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      
 
       {editingItem ? (
         <EditInventoryItem
@@ -104,6 +170,7 @@ const Inventory = () => {
                     onClick={() => setEditingItem(product)}>
                     Edit
                   </Button>
+
                 </TableCell>
               </TableRow>
             ))}
