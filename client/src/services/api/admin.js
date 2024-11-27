@@ -3,12 +3,14 @@ import { notificationService } from './notifications';
 
 /*
   Admin-specific database ops, so this uses supabaseAdmin rather than the regular supabase
+  All other roles should import supabase from './index' instead
+
 */
 export const adminService = {
   async createUser(userData) {
     console.log('AdminService: createUser called with:', userData);
 
-    if (!userData.email || !userData.password || !userData.role) {
+    if (!userData.email || !userData.role) {
       throw new Error('Required fields missing');
     }
 
@@ -16,18 +18,20 @@ export const adminService = {
       // Create auth user
       const { data: authData, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
         email: userData.email,
-        password: userData.password,
         email_confirm: true,
         user_metadata: {
           full_name: `${userData.firstName} ${userData.lastName}`,
-          role: userData.role
+          role: userData.role,
+          is_new_user: true
         }
       });
+
+      console.log('Auth user creation response:', authData, signUpError);
 
       if (signUpError) throw signUpError;
       if (!authData?.user?.id) throw new Error('User creation failed - no user ID returned');
 
-      // Create profile with all fields
+      // Create profile
       const { error: profileError } = await supabaseAdmin
         .from('profiles')
         .insert([{
@@ -47,28 +51,30 @@ export const adminService = {
           availability_notes: ['practitioner', 'staff'].includes(userData.role) ? userData.availability : null
         }]);
 
+      console.log('Profile creation response:', profileError);
+
       if (profileError) {
         console.error('Profile creation error:', profileError);
         await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
         throw profileError;
       }
 
-      // Handle role permissions
-      const { error: permissionError } = await supabaseAdmin
-        .from('role_permissions')
-        .select('id')
-        .eq('role', userData.role)
-        .single();
-
-      if (permissionError) {
-        console.error('Permission assignment error:', permissionError);
-        await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
-        throw permissionError;
-      }
-
-      // Send welcome email if requested
+      // Send welcome email
       if (userData.sendWelcomeEmail) {
-        await notificationService.sendWelcomeEmail(userData);
+        try {
+          console.log('Sending welcome email to:', userData.email);
+          const emailResult = await notificationService.sendWelcomeEmail({
+            email: userData.email,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            role: userData.role
+          });
+          console.log('Welcome email result:', emailResult);
+        } catch (emailError) {
+          console.error('Failed to send welcome email:', emailError);
+          // Don't throw here - user is still created even if email fails???????
+          // need to rethink this flow
+        }
       }
 
       return {
@@ -213,18 +219,34 @@ export const adminService = {
   // Deletes user from both the profiles and auth tables
   async deleteUser(userId) {
     try {
+      console.log('Deleting user:', userId);
+
+      // Delete from profiles first
       const { error: profileError } = await supabaseAdmin
         .from('profiles')
         .delete()
         .eq('id', userId);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Profile deletion error:', profileError);
+        throw profileError;
+      }
 
+      // Then delete from auth
       const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(
         userId
       );
 
-      if (authError) throw authError;
+      if (authError) {
+        console.error('Auth deletion error:', authError);
+        throw authError;
+      }
+
+      // Additional check to verify deletion
+      const { data: checkUser } = await supabaseAdmin.auth.admin.getUserById(userId);
+      if (checkUser) {
+        throw new Error('User still exists after deletion attempt');
+      }
 
       return { success: true };
     } catch (error) {
@@ -297,6 +319,47 @@ export const adminService = {
     } catch (error) {
       console.error('Delete product error:', error);
       throw new Error(`Failed to delete product: ${error.message}`);
+    }
+  },
+
+  async testManualAddUser(email, password, role = 'practitioner') {
+    try {
+      const { data: authData, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          role,
+          is_new_user: true
+        }
+      });
+
+      if (signUpError) throw signUpError;
+      if (!authData?.user?.id) throw new Error('User creation failed - no user ID returned');
+
+      // Create basic profile
+      const { error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .insert([{
+          id: authData.user.id,
+          first_name: 'Test',
+          last_name: 'User',
+          email: email,
+          role: role
+        }]);
+
+      if (profileError) {
+        await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+        throw profileError;
+      }
+
+      return {
+        success: true,
+        user: authData.user
+      };
+    } catch (error) {
+      console.error('Test user creation error:', error);
+      throw new Error(`Failed to create test user: ${error.message}`);
     }
   }
 };

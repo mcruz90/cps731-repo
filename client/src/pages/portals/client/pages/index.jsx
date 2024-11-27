@@ -7,6 +7,8 @@ import BookAppointment from './BookAppointment';
 import Cart from './Cart';
 import Checkout from './Checkout';
 import ProductCatalog from './ProductCatalog';
+import Orders from './Orders';
+import OrderConfirmation from './components/OrderConfirmation';
 
 export default function ClientPortal() {
   const navLinks = [
@@ -15,6 +17,7 @@ export default function ClientPortal() {
     { to: '/client/appointments', label: 'Appointments' },
     { to: '/client/cart', label: 'Cart' },
     { to: '/client/products', label: 'Products' },
+    { to: '/client/orders', label: 'Orders' }
   ];
 
   return (
@@ -29,6 +32,8 @@ export default function ClientPortal() {
         <Route path="/cart" element={<Cart />} />
         <Route path="/products" element={<ProductCatalog />} />
         <Route path="/checkout" element={<Checkout />} />
+        <Route path="/orders" element={<Orders />} />
+        <Route path="/orders/confirmation" element={<OrderConfirmation />} />
       </Routes>
     </>
   );

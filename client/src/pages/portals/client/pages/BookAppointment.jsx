@@ -60,13 +60,14 @@ import { useAuth } from '@/hooks/useAuth';
 import ServiceSelection from './ServiceSelection';
 import DateTimeSelection from './DateTimeSelection';
 import PortalLayout from '@/components/Layout/PortalLayout';
-import { BookingService } from '@/services/api/booking';
-import PractitionerSelection from './PractitionerSelection';
 import ConfirmDetails from './ConfirmDetails';
 import { useNavigate } from 'react-router-dom';
 
+<<<<<<< HEAD
 // PAYMENT GATEWAY
 import { PaymentGateway } from '@/services/api/payment';
+=======
+>>>>>>> supabase-send-email
 
 // Custom Tab Panel Component to let user toggle between each stage of the booking process
 function TabPanel({ children, value, index, ...other }) {
@@ -102,7 +103,7 @@ function a11yProps(index) {
 }
 
 export default function BookAppointment() {
-  const { user } = useAuth(); 
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -116,13 +117,12 @@ export default function BookAppointment() {
     practitionerName: '',
     duration: null,
     price: null,
-    notes: ''
+    notes: '',
+    clientId: user?.id
   });
 
-  // Navigation to have user redirected to appointments page after submitting booking
   const navigate = useNavigate();
 
-  // Reset error when changing tabs
   useEffect(() => {
     setError(null);
   }, [activeTab]);
@@ -137,13 +137,12 @@ export default function BookAppointment() {
       duration: service.duration,
       price: service.price
     }));
-    // Automatically advance to date/time selection
     setActiveTab(1);
   };
 
-  // DateTime Selection Handler
+  // DateTime and Practitioner Selection Handler
   const handleDateTimeSelect = (date, time, practitionerId, practitionerName) => {
-    console.log('DateTime selected:', { date, time, practitionerId, practitionerName });
+    console.log('DateTime and practitioner selected:', { date, time, practitionerId, practitionerName });
     setFormData(prevData => {
       const newData = {
         ...prevData,
@@ -152,10 +151,9 @@ export default function BookAppointment() {
         practitionerId: practitionerId,
         practitionerName: practitionerName
       };
-      console.log('Updated formData after datetime selection:', newData);
       
-      // Automatically advance to practitioner selection if both date AND time are selected
-      if (date && time) {
+      // Automatically advance to confirmation if all required data is present
+      if (date && time && practitionerId) {
         setActiveTab(2);
       }
       
@@ -163,22 +161,10 @@ export default function BookAppointment() {
     });
   };
 
-  // Practitioner Selection Handler
-  const handlePractitionerSelect = (practitioner) => {
-    console.log('Practitioner selected:', practitioner);
-    setFormData(prevData => ({
-      ...prevData,
-      practitionerId: practitioner.id,
-      practitionerName: practitioner.name
-    }));
-    // Automatically advance to confirmation
-    setActiveTab(3);
-  };
-
   // Confirmation Handler
-  const handleConfirmBooking = async (finalFormData) => {
-    setLoading(true);
+  const handleConfirmBooking = async (result) => {
     try {
+<<<<<<< HEAD
 
       //payment process here
       const paymentResult = await PaymentGateway.processPayment({
@@ -205,6 +191,21 @@ export default function BookAppointment() {
     } catch (err) {
       console.error('Error creating appointment:', err);
       setError('Failed to create appointment. Please try again.');
+=======
+      setLoading(true);
+      
+      if (result.success) {
+        setSuccess(true);
+        setTimeout(() => {
+          navigate('/client/appointments');
+        }, 2000);
+      } else {
+        setError(result.error);
+      }
+    } catch (error) {
+      console.error('Booking failed:', error);
+      setError(error.message);
+>>>>>>> supabase-send-email
     } finally {
       setLoading(false);
     }
@@ -226,14 +227,9 @@ export default function BookAppointment() {
               disabled={!formData.serviceId} 
             />
             <Tab 
-              label="Choose Provider" 
-              {...a11yProps(2)}
-              disabled={!formData.date || !formData.time} 
-            />
-            <Tab 
               label="Confirm Details" 
-              {...a11yProps(3)}
-              disabled={!formData.practitionerId} 
+              {...a11yProps(2)}
+              disabled={!formData.date || !formData.time || !formData.practitionerId} 
             />
           </Tabs>
 
@@ -259,21 +255,6 @@ export default function BookAppointment() {
           </TabPanel>
 
           <TabPanel value={activeTab} index={2}>
-            {!formData.serviceId || !formData.date || !formData.time ? (
-              <Typography color="text.secondary" sx={{ p: 3, textAlign: 'center' }}>
-                Please select a service and date/time first
-              </Typography>
-            ) : (
-              <PractitionerSelection
-                serviceId={formData.serviceId}
-                selectedPractitionerId={formData.practitionerId}
-                selectedDate={formData.date}
-                onPractitionerSelect={handlePractitionerSelect}
-              />
-            )}
-          </TabPanel>
-
-          <TabPanel value={activeTab} index={3}>
             {!formData.serviceId || !formData.date || !formData.time || !formData.practitionerId ? (
               <Typography color="text.secondary" sx={{ p: 3, textAlign: 'center' }}>
                 Please complete all previous steps first
@@ -297,7 +278,7 @@ export default function BookAppointment() {
             </Box>
           )}
 
-          {/* Loading indicator */}
+          {/* Loading and error states */}
           {loading && (
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
               <CircularProgress />

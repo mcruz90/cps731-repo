@@ -1,7 +1,10 @@
 import { supabase } from './index';
 
+// defines all services related to financial transactions
+// maybe need to conslidate this with reporting service???
+
 export const financialService = {
-  // Get transactions -- used to get the user's transactions
+  // Get transactions -- used to get the user's transactions (params: userId (UUID))
   getTransactions: async (userId) => {
       const { data, error } = await supabase
         .from('transactions')
@@ -13,15 +16,4 @@ export const financialService = {
     return data;  
   },
 
-  // Create payment -- used to create a payment
-  createPayment: async (paymentData) => {
-    const { data, error } = await supabase
-        .from('transactions')
-        .insert([paymentData])
-        .select()
-        .single();
-      
-    if (error) throw error;
-    return data;
-  }
 };

@@ -1,13 +1,14 @@
 import PropTypes from 'prop-types';
 import {
-  Grid,
   TextField,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
 } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 
+// filters the users based on the role, city, phone, and status
 const UserFilters = ({ users, filters, setFilters, setFilteredUsers }) => {
   const handleFilterChange = (field) => (event) => {
     const newFilters = {

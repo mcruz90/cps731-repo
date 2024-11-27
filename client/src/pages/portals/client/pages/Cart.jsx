@@ -34,12 +34,14 @@ const Cart = () => {
   const [itemToDelete, setItemToDelete] = useState(null);
   const navigate = useNavigate();
 
+  // fetches the cart items from the database
   useEffect(() => {
     fetchCartItems();
     const unsubscribe = cartService.subscribeToCartChanges(() => fetchCartItems());
     return () => unsubscribe();
   }, []);
 
+  // fetches the cart items from the database
   const fetchCartItems = async () => {
     try {
       const data = await cartService.getCartItems();
@@ -51,6 +53,7 @@ const Cart = () => {
     }
   };
 
+  // handles the change in the quantity of the cart item
   const handleQuantityChange = async (cartItem, newQuantity) => {
     try {
       const quantity = Math.max(1, Math.min(99, Number(newQuantity)));
@@ -68,11 +71,13 @@ const Cart = () => {
     }
   };
 
+  // handles the click on the delete button
   const handleDeleteClick = (item) => {
     setItemToDelete(item);
     setDeleteDialogOpen(true);
   };
 
+  // handles the confirmation of the delete button
   const handleDeleteConfirm = async () => {
     if (!itemToDelete) return;
 
@@ -90,11 +95,13 @@ const Cart = () => {
     }
   };
 
+  // handles the cancellation of the delete button
   const handleDeleteCancel = () => {
     setDeleteDialogOpen(false);
     setItemToDelete(null);
   };
 
+  // calculates the total price of the cart items 
   const calculateTotal = () => {
     return cartItems.reduce((sum, item) => {
       return sum + (item.quantity * item.products.price);
@@ -109,9 +116,11 @@ const Cart = () => {
         Shopping Cart
       </Typography>
 
+      {/* error and success messages */}
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {successMessage && <Alert severity="success" sx={{ mb: 2 }}>{successMessage}</Alert>}
 
+      {/* if the cart is empty */}
       {cartItems.length === 0 ? (
         <Paper sx={{ p: 3, textAlign: 'center' }}>
           <Typography variant="h6" gutterBottom>
@@ -126,6 +135,7 @@ const Cart = () => {
           </Button>
         </Paper>
       ) : (
+
         <Box>
           <TableContainer component={Paper}>
             <Table>

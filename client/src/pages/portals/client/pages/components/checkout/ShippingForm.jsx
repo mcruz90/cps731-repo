@@ -150,7 +150,7 @@ const ShippingForm = ({ onSubmit, initialData }) => {
         />
       )}
 
-      <Collapse in={!useDifferentAddress && !loading && profileData.address}>
+      <Collapse in={Boolean(!useDifferentAddress && !loading && profileData.address)}>
         <Box sx={{ mb: 3 }}>
           <Typography variant="body1" gutterBottom>
             Default Shipping Address:
@@ -171,7 +171,7 @@ const ShippingForm = ({ onSubmit, initialData }) => {
         </Box>
       </Collapse>
 
-      <Collapse in={useDifferentAddress || !profileData.address}>
+      <Collapse in={Boolean(useDifferentAddress || !profileData.address)}>
         <Grid container spacing={3} component="form" onSubmit={handleSubmit}>
           <Grid item xs={12} sm={6}>
             <FormControl fullWidth error={!!errors.firstName}>

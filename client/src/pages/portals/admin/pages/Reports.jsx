@@ -39,6 +39,7 @@ const Reports = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    
     // Fetch practitioners and services for filter dropdowns
     const fetchFilterOptions = async () => {
       try {

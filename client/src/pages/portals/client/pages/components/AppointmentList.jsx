@@ -1,132 +1,116 @@
-// TODO: Add appointment list component here
-// TODO: connect to appointments.jsx to display actual appointment data
-// TODO: add reschedule and cancel functionality
-// TODO: add expanded view component/library/etc and such when appointment is selected
-// TODO: add messaging functionality to display messages between client and practitioner
-import { useState } from 'react';
-import { formatDate } from '@/utils/dateUtils';
-import { AppointmentStatus } from '@/components/UI/AppointmentStatus';
-import { Button } from '@/components/Button';
-import './AppointmentList.css';
+import React from 'react';
 import PropTypes from 'prop-types';
+import {
+  List,
+  ListItem,
+  ListItemText,
+  IconButton,
+  Typography,
+  Box,
+  Divider,
+} from '@mui/material';
+import CancelIcon from '@mui/icons-material/Cancel';
+import EditIcon from '@mui/icons-material/Edit';
+import { formatDate } from '@/utils/dateUtils';
 
+// Short-hand list to display the confirmed appointments on client's dashboard
+const AppointmentList = ({ appointments, readOnly }) => {
+  // Filter only confirmed appointments
+  const confirmedAppointments = appointments.filter(
+    (appointment) => appointment.status.toLowerCase() === 'confirmed'
+  );
 
-// fyi, each prop accepted by AppointmentList is defined below
-// appointments: Array<{
-//     id: string;
-//     sessionType: string;
-//     date: string;
-//     time: string;
-//     instructor/practitioner: string;
-//     status: 'upcoming' | 'completed' | 'cancelled';
-// }>
-
-
-const AppointmentList = ({ 
-    appointments = [],
-    onCancelAppointment = () => {},
-    onReschedule = () => {} }) => {
-  const [selectedAppointment, setSelectedAppointment] = useState(null);
-
-
-  const bookSession = () => {
-    window.location.href = '/book';
+  if (confirmedAppointments.length === 0) {
+    return (
+      <Typography variant="body1">
+        No confirmed appointments to display.
+      </Typography>
+    );
   }
 
-  const handleCancel = (appointmentId) => {
-    if (window.confirm('Are you sure you want to cancel this appointment?')) {
-      onCancelAppointment(appointmentId);
-    }
-  };
-
   return (
-    <div className="appointment-list">
-      {appointments?.length === 0 ? (
-        <div className="empty-state">
-          <p>No appointments scheduled</p>
-          <Button 
-            variant="primary" 
-            onClick={bookSession}
-          >
-            Book a Session
-          </Button>
-        </div>
-      ) : (
-        <div className="appointments-grid">
-          {appointments?.map((appointment) => (
-            <div 
-              key={appointment.id} 
-              className="appointment-card"
-              onClick={() => setSelectedAppointment(appointment)}
+    <List>
+      {confirmedAppointments.map((appointment) => {
+        const formattedDate = formatDate(appointment.date);
+
+        return (
+          <React.Fragment key={appointment.id}>
+            <ListItem
+              alignItems="flex-start"
+              secondaryAction={
+                !readOnly && (
+                  <Box>
+                    <IconButton
+                      edge="end"
+                      aria-label="edit"
+                      onClick={() => {
+                        // Handle edit action
+                        console.log(`Edit appointment ${appointment.id}`);
+                      }}
+                    >
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton
+                      edge="end"
+                      aria-label="cancel"
+                      onClick={() => {
+                        // Handle cancel action
+                        console.log(`Cancel appointment ${appointment.id}`);
+                      }}
+                    >
+                      <CancelIcon />
+                    </IconButton>
+                  </Box>
+                )
+              }
             >
-              <div className="appointment-header">
-                <h3>{appointment.sessionType}</h3>
-                <AppointmentStatus status={appointment.status} />
-              </div>
-              
-              <div className="appointment-details">
-                <p>
-                  <strong>Date: </strong>
-                  {formatDate(appointment.date)}
-                </p>
-                <p>
-                  <strong>Time: </strong>
-                  {appointment.time}
-                </p>
-                <p>
-                  <strong>Instructor: </strong>
-                  {appointment.instructor}
-                </p>
-              </div>
-
-              <div className="appointment-actions">
-                {appointment.status === 'upcoming' && (
-                  <>
-                    <Button
-                      variant="secondary"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onReschedule(appointment.id);
-                      }}
-                    >
-                      Reschedule
-                    </Button>
-                    <Button
-                      variant="danger"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCancel(appointment.id);
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  </>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Use a Modal or some other expanded view component/library/etc and such when appointment is selected ??? */}
-      {selectedAppointment && (
-        <div className="appointment-modal">
-
-          {/* Need to render appointment details here */}
-          <Button onClick={() => setSelectedAppointment(null)}>
-            Close
-          </Button>
-        </div>
-      )}
-    </div>
+              <ListItemText
+                primary={
+                  <Typography variant="h6" component="div">
+                    {appointment.sessionType} with {appointment.instructor}
+                  </Typography>
+                }
+                secondary={
+                  <Box>
+                    <Typography variant="body2" color="textSecondary">
+                      <strong>Date:</strong> {formattedDate}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      <strong>Time:</strong> {appointment.time}
+                    </Typography>
+                    {appointment.notes && (
+                      <Typography variant="body2" color="textSecondary">
+                        <strong>Notes:</strong> {appointment.notes}
+                      </Typography>
+                    )}
+                    <Typography variant="body2" color="textSecondary">
+                      <strong>Status:</strong> {appointment.status}
+                    </Typography>
+                  </Box>
+                }
+              />
+            </ListItem>
+            <Divider component="li" />
+          </React.Fragment>
+        );
+      })}
+    </List>
   );
 };
 
-export default AppointmentList;
-
-// PropTypes
 AppointmentList.propTypes = {
-  appointments: PropTypes.array.isRequired,
-  onCancelAppointment: PropTypes.func.isRequired,
-  onReschedule: PropTypes.func.isRequired
+  appointments: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      sessionType: PropTypes.string.isRequired,
+      date: PropTypes.oneOfType([PropTypes.string, PropTypes.instanceOf(Date)]).isRequired,
+      time: PropTypes.string.isRequired,
+      instructor: PropTypes.string.isRequired,
+      notes: PropTypes.string,
+      status: PropTypes.string.isRequired,
+    })
+  ).isRequired,
+  readOnly: PropTypes.bool,
 };
+
+export default AppointmentList;

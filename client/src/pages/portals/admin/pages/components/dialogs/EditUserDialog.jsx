@@ -7,19 +7,20 @@ import {
   DialogActions,
   Button,
   TextField,
-  Grid,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
   FormHelperText
 } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 import { 
   validateEmail, 
   validatePhone, 
   validateRequired, 
   validatePostalCode 
 } from '@/utils/validation';
+
 
 const EditUserDialog = ({ open, user, onClose, onSave }) => {
   const [formData, setFormData] = useState({
@@ -41,6 +42,7 @@ const EditUserDialog = ({ open, user, onClose, onSave }) => {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
 
+  // rerenders as the user enters in data
   useEffect(() => {
     if (user) {
       setFormData({
@@ -63,6 +65,7 @@ const EditUserDialog = ({ open, user, onClose, onSave }) => {
     }
   }, [user]);
 
+  // validates the field based on the name of the field and the value of the field using rules in the validation.js file
   const validateField = (name, value) => {
     switch (name) {
       case 'email':
@@ -87,7 +90,7 @@ const EditUserDialog = ({ open, user, onClose, onSave }) => {
       [field]: newValue
     }));
     
-    // Validate field if it's been touched
+    // Validate field if it's been touched/clicked on by the user
     if (touched[field]) {
       setErrors(prev => ({
         ...prev,

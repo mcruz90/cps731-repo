@@ -1,12 +1,18 @@
 // AuthProvider fleshes out the authentication context in greater detail
-// e.g. it subscribes to auth state changes, which is useful for immediately updating the UI when 
+// e.g. it subscribes to auth state changes, which is useful for immediately updating the UI when the user logs in or out
 // also tracks their current session state, as this will be needed to see if the user is too idle for a certain period of time and needs to be logged out for security reasons
 // TODO: add a function to track how long the user has been idle and log them out if they have been idle for too long
 
 import { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
+
+// authentication API service
 import { authService } from '@/services/api/auth';
+
+// authentication context so that the authentication state can be accessed by the components that need it
 import { AuthContext } from './AuthContext';
+
+// prop types for typechecking the props passed to the component
+import PropTypes from 'prop-types';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -20,10 +26,10 @@ export const AuthProvider = ({ children }) => {
     logout: false,
   });
 
+  // initialize the authentication state
   useEffect(() => {
     let mounted = true;
     
-    // Initialize the authentication state
     const initializeAuth = async () => {
       try {
         setLoadingState(prev => ({ ...prev, auth: true }));
@@ -72,7 +78,7 @@ export const AuthProvider = ({ children }) => {
 
     // Subscribe to auth state changes
     const { data: { subscription } } = authService.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event, session?.user);
+      //console.log('Auth state changed:', event, session?.user);
       
       if (!mounted) return;
 
@@ -122,16 +128,19 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  useEffect(() => {
-    console.log('AuthProvider state:', {
-      user,
-      profile,
-      loading,
-      loadingState,
-      error
-    });
-  }, [user, profile, loading, loadingState, error]);
+  // TODO: remove this logging, only needed it for debugging
+  //useEffect(() => {
+  //  console.log('AuthProvider state:', {
+  //    user,
+  //    profile,
+  //    loading,
+  //    loadingState,
+  //    error
+  //  });
+  //}, [user, profile, loading, loadingState, error]);
 
+  
+  // the value that will be provided to the components that need it
   const value = {
     user,
     profile,

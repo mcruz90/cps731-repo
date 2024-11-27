@@ -11,7 +11,7 @@ import {
 } from '@mui/material';
 import { supabase } from '@/services/api';
 
-export default function ServiceSelection({ onServiceSelect, onComplete }) {
+export default function ServiceSelection({ onServiceSelect }) {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -41,7 +41,6 @@ export default function ServiceSelection({ onServiceSelect, onComplete }) {
   const handleServiceClick = (service) => {
     console.log('Service clicked in ServiceSelection:', service);
     onServiceSelect(service);
-    onComplete();
   };
 
   if (loading) {
@@ -106,6 +105,5 @@ export default function ServiceSelection({ onServiceSelect, onComplete }) {
 }
 
 ServiceSelection.propTypes = {
-  onServiceSelect: PropTypes.func.isRequired,
-  onComplete: PropTypes.func.isRequired
+  onServiceSelect: PropTypes.func.isRequired
 };

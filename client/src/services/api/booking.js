@@ -1,81 +1,93 @@
 import { supabase } from './index';
+import { format, getDay } from 'date-fns';
+
+// defines all services related to booking
+// Available methods:
+// getServiceAvailability, - fetches the availability for a service on a selected date (params: serviceId (UUID), selectedDate (Date))
+// createAppointment, - creates a new appointment (params: appointmentData (Object))
+// getServicePractitioners, - fetches the practitioners for a service (params: serviceId (UUID))
+// createAppointmentWithPayment, - creates a new appointment with payment (params: appointmentDetails (Object))
+// updateAppointmentStatus, - updates the status of an appointment (params: appointmentId (UUID), status (String))
+// checkPractitionerAvailability, - checks the availability of a practitioner (params: practitionerId (UUID), date (Date), time (String))
 
 export const BookingService = {
-  async getServiceAvailability(serviceId) {
-    console.log('Fetching availability for service:', serviceId);
-    
+
+  // fetches the availability for a service on a selected date
+  async getServiceAvailability(serviceId, selectedDate) {
     try {
-      // Get all practitioners for this service
-      const { data: practitionerServices, error: psError } = await supabase
+      console.log('Fetching availability for:', { serviceId, selectedDate });
+      
+      const dayOfWeek = getDay(selectedDate);
+      
+      // First get practitioners for this service
+      // Join practitioner_services with profiles to get practitioner names
+      // TODO: add specializations to the query and figure out how to display them in the UI???
+      const { data: practitioners, error: practitionerError } = await supabase
         .from('practitioner_services')
         .select(`
           practitioner_id,
-          service_id,
-          profiles:practitioner_id (
+          profiles!practitioner_id (
             first_name,
             last_name
           )
         `)
         .eq('service_id', serviceId);
 
-      console.log('Practitioner service query result:', { practitionerServices, error: psError });
-
-      if (psError) {
-        console.error('Error fetching practitioner services:', psError);
-        throw psError;
+      if (practitionerError) {
+        console.error('Error fetching practitioners:', practitionerError);
+        throw practitionerError;
       }
 
-      if (!practitionerServices?.length) {
-        console.log('No practitioners found for this service');
-        return { practitioners: [], availability: [] };
-      }
+      console.log('Fetched practitioners:', practitioners);
 
-      // Get first practitioner for now (we can handle multiple practitioners later)
-      const firstPractitioner = practitionerServices[0];
-
-      // Then get their availability schedule
-      const { data: availabilityData, error: availError } = await supabase
+      // Get availability for these practitioners from 'availability' table
+      const practitionerIds = practitioners.map(p => p.practitioner_id);
+      
+      const { data: availabilityData, error: availabilityError } = await supabase
         .from('availability')
-        .select(`
-          id,
-          practitioner_id,
-          day_of_week,
-          start_time,
-          end_time,
-          is_available
-        `)
-        .eq('practitioner_id', firstPractitioner.practitioner_id)
+        .select('*')
+        .in('practitioner_id', practitionerIds)
+        .eq('day_of_week', dayOfWeek)
         .eq('is_available', true);
 
-      console.log('Availability query result:', { availabilityData, error: availError });
-
-      if (availError) {
-        console.error('Error fetching availability:', availError);
-        throw availError;
+      if (availabilityError) {
+        console.error('Error fetching availability:', availabilityError);
+        throw availabilityError;
       }
 
-      // Format the response
-      const response = {
-        practitioner: {
-          id: firstPractitioner.practitioner_id,
-          name: `${firstPractitioner.profiles.first_name} ${firstPractitioner.profiles.last_name}`
-        },
-        availability: availabilityData?.map(slot => ({
-          dayOfWeek: slot.day_of_week,
-          startTime: slot.start_time,
-          endTime: slot.end_time
-        })) || []
-      };
+      console.log('Raw availability data:', availabilityData);
 
-      console.log('Formatted availability response:', response);
-      return response;
+      // Process the availability data with practitioner names
+      const availableTimes = availabilityData.map(slot => {
+        const practitioner = practitioners.find(p => p.practitioner_id === slot.practitioner_id);
+        return {
+          slotId: slot.id,
+          startTime: slot.start_time,
+          endTime: slot.end_time,
+          practitionerId: slot.practitioner_id,
+          practitionerName: practitioner ? 
+            `${practitioner.profiles.first_name} ${practitioner.profiles.last_name}` : 
+            'Unknown Provider'
+        };
+      });
+
+      console.log('Processed available times:', availableTimes);
+
+      return {
+        success: true,
+        availableTimes
+      };
 
     } catch (error) {
       console.error('Error in getServiceAvailability:', error);
-      throw new Error(`Failed to fetch service availability: ${error.message}`);
+      return {
+        success: false,
+        error: error.message
+      };
     }
   },
 
+  // creates a new appointment
   async createAppointment(appointmentData) {
     console.log('Creating appointment with data:', appointmentData);
     
@@ -90,7 +102,7 @@ export const BookingService = {
           start_time: appointmentData.time,
           duration: appointmentData.duration,
           notes: appointmentData.notes,
-          status: 'pending' // Default status
+          status: 'pending'
         }])
         .select()
         .single();
@@ -108,35 +120,137 @@ export const BookingService = {
     }
   },
 
+  // fetches the practitioners for a service
   async getServicePractitioners(serviceId) {
-    console.log('Fetching practitioners for service:', serviceId);
-    
     try {
-      const { data: practitionerServices, error: psError } = await supabase
+      const { data, error } = await supabase
         .from('practitioner_services')
         .select(`
           practitioner_id,
-          service_id,
-          profiles:practitioner_id (
+          profiles!inner (
+            id,
             first_name,
             last_name,
-            role
+            role,
+            specializations
           )
         `)
         .eq('service_id', serviceId);
 
-      if (psError) throw psError;
+      if (error) throw error;
 
-      const practitioners = practitionerServices.map(ps => ({
-        id: ps.practitioner_id,
-        name: `${ps.profiles.first_name} ${ps.profiles.last_name}`,
-        role: ps.profiles.role
-      }));
-
-      return { practitioners };
+      return {
+        success: true,
+        practitioners: data.map(item => ({
+          id: item.profiles.id,
+          name: `${item.profiles.first_name} ${item.profiles.last_name}`,
+          role: item.profiles.role,
+          specializations: item.profiles.specializations
+        }))
+      };
     } catch (error) {
-      console.error('Error in getServicePractitioners:', error);
-      throw new Error(`Failed to fetch practitioners: ${error.message}`);
+      console.error('Error fetching practitioners:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  },
+
+  // creates a new appointment with payment
+  async createAppointmentWithPayment(appointmentDetails) {
+    try {
+      console.log('Creating appointment first:', appointmentDetails);
+
+      // Create appointment first with 'pending' status until payment completes
+      const { data: appointment, error } = await supabase
+        .from('appointments')
+        .insert([{
+          service_id: appointmentDetails.serviceId,
+          practitioner_id: appointmentDetails.practitionerId,
+          client_id: appointmentDetails.clientId,
+          date: appointmentDetails.date,
+          time: appointmentDetails.time,
+          duration: appointmentDetails.duration,
+          notes: appointmentDetails.notes,
+          status: 'pending'
+        }])
+        .select(`
+          *,
+          services (*),
+          profiles:practitioner_id (*)
+        `)
+        .single();
+
+      if (error) {
+        console.error('Error creating appointment:', error);
+        throw error;
+      }
+
+      return {
+        success: true,
+        appointment
+      };
+    } catch (error) {
+      console.error('Error in createAppointmentWithPayment:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  },
+
+  // updates the status of an appointment
+  async updateAppointmentStatus(appointmentId, status) {
+    try {
+      const { data, error } = await supabase
+        .from('appointments')
+        .update({ status })
+        .eq('id', appointmentId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        appointment: data
+      };
+    } catch (error) {
+      console.error('Error updating appointment status:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  },
+
+  // checks the availability of a practitioner
+  async checkPractitionerAvailability(practitionerId, date, time) {
+    try {
+      const dayOfWeek = format(date, 'EEEE').toLowerCase();
+      
+      const { data, error } = await supabase
+        .from('availability')
+        .select('*')
+        .eq('practitioner_id', practitionerId)
+        .eq('day_of_week', dayOfWeek)
+        .eq('is_available', true)
+        .gte('start_time', time)
+        .lte('end_time', time);
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        isAvailable: data.length > 0
+      };
+    } catch (error) {
+      console.error('Error checking practitioner availability:', error);
+      return {
+        success: false,
+        error: error.message
+      };
     }
   }
 };
