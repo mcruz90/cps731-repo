@@ -83,6 +83,28 @@ const PaymentForm = ({ onSubmit, initialData }) => {
   };
 
   const handleSubmit = async (e) => {
+<<<<<<< HEAD
+    e?.preventDefault();
+
+    if (validateForm()) return;
+    
+    if (!stripe || !elements) {
+      console.error('Stripe.js is not loaded yet.');
+      return;
+    }
+
+    const cardElement = elements.getElement(CardElement);
+    if (!cardElement) {
+      console.error('Card element not found');
+      return;
+    }
+
+    try {
+      // Create payment method
+      const { error, paymentMethod } = await stripe.createPaymentMethod({
+        type: 'card',
+        card: cardElement,
+=======
     e.preventDefault();
     
     if (!validateForm()) return;
@@ -91,6 +113,7 @@ const PaymentForm = ({ onSubmit, initialData }) => {
       const { error, paymentMethod } = await stripe.createPaymentMethod({
         type: 'card',
         card: elements.getElement(CardElement),
+>>>>>>> supabase-send-email
         billing_details: {
           name: formData.cardName,
           email: formData.email,
@@ -105,13 +128,22 @@ const PaymentForm = ({ onSubmit, initialData }) => {
       });
 
       if (error) {
+<<<<<<< HEAD
+        console.error('Payment error:', error);
+=======
+>>>>>>> supabase-send-email
         setErrors(prev => ({ ...prev, stripe: error.message }));
         return;
       }
 
+<<<<<<< HEAD
+      onSubmit({
+        paymentMethodId: paymentMethod.id,
+=======
       await onSubmit({
         paymentMethodId: paymentMethod.id,
         currency: formData.currency,
+>>>>>>> supabase-send-email
         billingDetails: {
           name: formData.cardName,
           email: formData.email,
@@ -122,7 +154,12 @@ const PaymentForm = ({ onSubmit, initialData }) => {
             postal_code: formData.postalCode,
             country: formData.country,
           },
+<<<<<<< HEAD
+        },
+        currency: formData.currency
+=======
         }
+>>>>>>> supabase-send-email
       });
     } catch (err) {
       console.error('Unexpected error:', err);

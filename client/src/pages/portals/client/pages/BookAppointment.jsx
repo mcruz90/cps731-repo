@@ -63,6 +63,11 @@ import PortalLayout from '@/components/Layout/PortalLayout';
 import ConfirmDetails from './ConfirmDetails';
 import { useNavigate } from 'react-router-dom';
 
+<<<<<<< HEAD
+// PAYMENT GATEWAY
+import { PaymentGateway } from '@/services/api/payment';
+=======
+>>>>>>> supabase-send-email
 
 // Custom Tab Panel Component to let user toggle between each stage of the booking process
 function TabPanel({ children, value, index, ...other }) {
@@ -159,6 +164,34 @@ export default function BookAppointment() {
   // Confirmation Handler
   const handleConfirmBooking = async (result) => {
     try {
+<<<<<<< HEAD
+
+      //payment process here
+      const paymentResult = await PaymentGateway.processPayment({
+        amount: finalFormData.price,
+        currency: finalFormData.payment.currency,
+        paymentMethod: finalFormData.payment.paymentMethod,
+        billingDetails: finalFormData.payment.billingDetails
+      });
+
+      // If payment is successful, create appointment
+      if (paymentResult.success) {
+        const appointmentData = {
+          ...finalFormData,
+          client_id: user?.id,
+          payment_id: paymentResult.paymentId
+        };
+      
+        await BookingService.createAppointment(appointmentData);
+        setSuccess(true);
+        navigate('/appointments');
+      } else {
+        setError('Payment failed. Please try again.');
+      }
+    } catch (err) {
+      console.error('Error creating appointment:', err);
+      setError('Failed to create appointment. Please try again.');
+=======
       setLoading(true);
       
       if (result.success) {
@@ -172,6 +205,7 @@ export default function BookAppointment() {
     } catch (error) {
       console.error('Booking failed:', error);
       setError(error.message);
+>>>>>>> supabase-send-email
     } finally {
       setLoading(false);
     }

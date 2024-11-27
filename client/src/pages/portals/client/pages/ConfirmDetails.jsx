@@ -28,9 +28,12 @@ import PaymentForm from './components/checkout/PaymentForm';
 // Load Stripe
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
+<<<<<<< HEAD
+=======
 import { PaymentGateway } from '@/services/api/payment';
 import { BookingService } from '@/services/api/booking';
 
+>>>>>>> supabase-send-email
 export default function ConfirmDetails({ 
   formData,
   onConfirm,
@@ -45,6 +48,20 @@ export default function ConfirmDetails({
 
   const handlePaymentSubmit = async (paymentData) => {
     try {
+<<<<<<< HEAD
+      const allAppointmentData = {
+        ...formData,
+        notes,
+        payment: {
+          ...paymentData,
+          amount: formData.price,
+          currency: 'CAD'
+        }
+      };
+      await onConfirm(allAppointmentData);
+    } catch (error) {
+      console.error('Error submitting payment:', error);
+=======
       // First create the appointment
       const appointmentResult = await BookingService.createAppointmentWithPayment(formData);
       
@@ -80,6 +97,7 @@ export default function ConfirmDetails({
     } catch (error) {
       console.error('Error in payment/booking process:', error);
       throw new Error(`Booking failed: ${error.message}`);
+>>>>>>> supabase-send-email
     }
   };
 
@@ -253,17 +271,28 @@ export default function ConfirmDetails({
             </Elements>
           )}
 
+<<<<<<< HEAD
+          {paymentMethod === 'paypal' && (
+                  <PayPalScriptProvider
+                    options={{
+                      //'client-id': 'your-paypal-client-id', // Addl PayPal client ID
+=======
           {/* PAYPAL INTEGRATION -- need to fix this and make sure it works with payment flow like Stripe does */}
           {paymentMethod === 'paypal' && (
                   <PayPalScriptProvider
                     options={{
+>>>>>>> supabase-send-email
                       'client-id': import.meta.env.VITE_PAYPAL_CLIENT_ID,
                       currency: 'USD',
                     }}
                   >
+<<<<<<< HEAD
+                    <h2>Pay with PayPal</h2>
+=======
                     <Typography variant="h6" gutterBottom>
                       Pay with PayPal
                     </Typography>
+>>>>>>> supabase-send-email
                     <PayPalButtons
                       style={{ layout: 'vertical' }}
                       createOrder={(data, actions) => {
@@ -271,7 +300,11 @@ export default function ConfirmDetails({
                           purchase_units: [
                             {
                               amount: {
+<<<<<<< HEAD
+                                value: '50.00', 
+=======
                                 value: formData.price, 
+>>>>>>> supabase-send-email
                               },
                             },
                           ],
