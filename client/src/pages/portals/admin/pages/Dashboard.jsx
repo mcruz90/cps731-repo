@@ -20,8 +20,8 @@ import AppointmentReports from './components/AppointmentReports';
 import { Link } from 'react-router-dom';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 
-// Cache constants to prevent constant re-renders
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+// Cache constants to prevent constant re-renders (5 minutes)
+const CACHE_DURATION = 5 * 60 * 1000;
 const CACHE_KEY = 'dashboardData';
 
 // Helper function to handle cache
@@ -62,26 +62,6 @@ const DashboardCard = React.memo(function DashboardCard({ title, value, icon, co
     </Card>
   );
 });
-
-// Add PropTypes validation
-DashboardCard.propTypes = {
-  title: PropTypes.string.isRequired,
-  value: PropTypes.oneOfType([
-    PropTypes.string,
-    PropTypes.number
-  ]).isRequired,
-  icon: PropTypes.node.isRequired,
-  color: PropTypes.string,
-  isLoading: PropTypes.bool,
-  error: PropTypes.string
-};
-
-// Add default props
-DashboardCard.defaultProps = {
-  color: 'primary',
-  isLoading: false,
-  error: null
-};
 
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(() => getCachedData());
@@ -271,3 +251,16 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+
+
+DashboardCard.propTypes = {
+  title: PropTypes.string.isRequired,
+  value: PropTypes.oneOfType([
+    PropTypes.string,
+    PropTypes.number
+  ]).isRequired,
+  icon: PropTypes.node.isRequired,
+  color: PropTypes.string,
+  isLoading: PropTypes.bool,
+  error: PropTypes.string
+};

@@ -5,6 +5,7 @@ import { profileService } from './profile';
 const CACHE_KEY = 'authSession';
 const CACHE_DURATION = 30 * 60 * 1000; 
 
+// helper function to get the cached session
 const getCachedSession = () => {
   const cached = localStorage.getItem(CACHE_KEY);
   if (!cached) return null;
@@ -19,9 +20,21 @@ const getCachedSession = () => {
 };
 
 // Auth service set up using Supabase
+// Available methods:
+// getCurrentSession, - tries to get the cached session first (params: none)
+// getUserProfile, - fetches the user profile from the database (params: userId)
+// login, - logs in the user (params: email, password)
+// logout, - logs out the user (params: none)
+// onAuthStateChange, - listens for changes in the user's authentication state (params: callback function)
+// register, - registers a new user (params: userData)
+// getUserRoleById, - fetches the user role from the database (params: userId)
+// resetPassword, - resets the user's password ***** BACKBURNER UNTIL SEND-EMAIL EDGE FUNCTIONS IN SUPABASE FIGURED OUT???
+// setSession, - verifies the token for password setup ***** BACKBURNER UNTIL SEND-EMAIL EDGE FUNCTIONS IN SUPABASE FIGURED OUT???
+// updatePassword, - updates the user's password ***** BACKBURNER UNTIL SEND-EMAIL EDGE FUNCTIONS IN SUPABASE FIGURED OUT???
+
 export const authService = {
+    // tries to get the cached session first
     async getCurrentSession() {
-      // Try to get cached session first
       const cachedSession = getCachedSession();
       if (cachedSession) {
         return cachedSession;
@@ -41,6 +54,7 @@ export const authService = {
       return session;
     },
   
+    // fetches the user profile from the database
     async getUserProfile(userId) {
       const cacheKey = `profile_${userId}`;
       const cachedProfile = localStorage.getItem(cacheKey);
@@ -61,6 +75,7 @@ export const authService = {
       }
     },
   
+    // logs in the user
     async login(email, password) {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -71,18 +86,21 @@ export const authService = {
       return { user: data.user };
     },
   
+    // logs out the user
     async logout() {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
     },
   
+    // listens for changes in the user's authentication state
     onAuthStateChange(callback) {
       return supabase.auth.onAuthStateChange(callback);
     },
   
+    // registers a new user
     async register(userData) {
         try {
-            // Explicitly destructure only the fields we want to send to Supabase
+            
             const { 
                 email, 
                 password, 
@@ -144,7 +162,7 @@ export const authService = {
 
                 if (profileError) {
                     console.error('Profile creation error:', profileError);
-                    // If profile creation fails, we should probably delete the auth user
+                    // If profile creation fails, we should probably delete the auth user // need to rethink this flow
                     await supabase.auth.admin.deleteUser(authData.user.id);
                     throw profileError;
                 }
@@ -159,16 +177,18 @@ export const authService = {
             throw error;
         }
     },
-  
+    
+    // resets the user's password
     async resetPassword(email) {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: `${window.location.origin}/reset-password`,
+            redirectTo: `${window.location.origin}/set-password`,
         });
         
         if (error) throw error;
         return true;
     },
   
+    // fetches the user role from the database
     async getUserRoleById(userId) {
         try {
             const { data: profile, error } = await supabase
@@ -184,5 +204,48 @@ export const authService = {
             throw error;
         }
     },
+
+    // verifies the token for password setup
+    async setSession(token) {
+        try {
+            console.log('Attempting to verify token:', token);
+            
+            let response;
+            try {
+                response = await supabase.auth.verifyOtp({
+                    token_hash: token,
+                    type: 'recovery'
+                });
+            } catch (e) {
+                console.log(e, 'OTP verification failed, trying session recovery');
+                response = await supabase.auth.getSession();
+            }
+            
+            const { data, error } = response;
+            
+            if (error) throw error;
+            
+            console.log('Session verification response:', data);
+            return { session: data.session };
+        } catch (error) {
+            console.error('Set session error:', error);
+            throw error;
+        }
+    },
+
+    // updates the user's password
+    async updatePassword(password) {
+        try {
+            const { data, error } = await supabase.auth.updateUser({
+                password: password
+            });
+            
+            if (error) throw error;
+            return { user: data.user };
+        } catch (error) {
+            console.error('Password update error:', error);
+            throw error;
+        }
+    }
 };
 

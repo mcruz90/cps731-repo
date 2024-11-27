@@ -8,6 +8,7 @@ import {
   Typography
 } from '@mui/material';
 
+// activating/deactivating users
 const ActionConfirmDialog = ({ open, action, user, onClose, onConfirm }) => {
   const getActionText = () => {
     if (action === 'deactivate') {

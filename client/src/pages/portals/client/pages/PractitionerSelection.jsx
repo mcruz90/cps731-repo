@@ -19,6 +19,7 @@ export default function PractitionerSelection({
   serviceId, 
   selectedPractitionerId,
   selectedDate,
+  selectedTime,
   onPractitionerSelect 
 }) {
   const [practitioners, setPractitioners] = useState([]);
@@ -27,13 +28,30 @@ export default function PractitionerSelection({
 
   useEffect(() => {
     const fetchPractitioners = async () => {
-      if (!serviceId) return;
+      if (!serviceId || !selectedDate || !selectedTime) return;
       
       setLoading(true);
       try {
+        // fetches the practitioners from the database
         const { practitioners } = await BookingService.getServicePractitioners(serviceId);
-        console.log('Fetched practitioners:', practitioners);
-        setPractitioners(practitioners);
+        
+        // filters the practitioners based on availability
+        const availablePractitioners = [];
+        for (const practitioner of practitioners) {
+          const availability = await BookingService.getServiceAvailability(
+            serviceId,
+            selectedDate,
+            practitioner.id
+          );
+          
+          if (availability.success && 
+              availability.availableTimes.some(slot => slot.startTime === selectedTime)) {
+            availablePractitioners.push(practitioner);
+          }
+        }
+        
+        //console.log('Available practitioners:', availablePractitioners);
+        setPractitioners(availablePractitioners);
       } catch (err) {
         console.error('Error fetching practitioners:', err);
         setError('Failed to load practitioners');
@@ -43,7 +61,7 @@ export default function PractitionerSelection({
     };
 
     fetchPractitioners();
-  }, [serviceId]);
+  }, [serviceId, selectedDate, selectedTime]);
 
   if (loading) {
     return (
@@ -143,5 +161,6 @@ PractitionerSelection.propTypes = {
   serviceId: PropTypes.string.isRequired,
   selectedPractitionerId: PropTypes.string,
   selectedDate: PropTypes.instanceOf(Date),
+  selectedTime: PropTypes.string,
   onPractitionerSelect: PropTypes.func.isRequired
 };

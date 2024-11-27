@@ -1,5 +1,7 @@
 import { createTheme } from '@mui/material/styles';
 
+const defaultTheme = createTheme();
+
 export const theme = createTheme({
   palette: {
     primary: {
@@ -161,9 +163,6 @@ export const theme = createTheme({
     borderRadius: 8,
   },
   shadows: [
-    'none',
-    '0 2px 4px rgba(123, 176, 212, 0.1)',
-    '0 4px 8px rgba(123, 176, 212, 0.15)',
-    '0 8px 16px rgba(123, 176, 212, 0.2)',
+    ...defaultTheme.shadows,
   ],
 });

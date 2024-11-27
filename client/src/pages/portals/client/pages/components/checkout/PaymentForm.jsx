@@ -6,86 +6,61 @@ import {
   Typography,
   FormControl,
   FormHelperText,
-  InputAdornment,
-  Button
+  Button,
+  Select,
+  MenuItem
 } from '@mui/material';
-import CreditCardIcon from '@mui/icons-material/CreditCard';
-import LockIcon from '@mui/icons-material/Lock';
 import PropTypes from 'prop-types';
 
+// STRIPE INTEGRATION
+import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+
 const PaymentForm = ({ onSubmit, initialData }) => {
+  //STRIPE INTEGRATION
+  const stripe = useStripe();
+  const elements = useElements();
+
+  // Form data with billing details
   const [formData, setFormData] = useState(initialData || {
     cardName: '',
-    cardNumber: '',
-    expiryDate: '',
-    cvv: ''
+    email: '',
+    address: '',
+    city: '',
+    state: '',
+    postalCode: '',
+    country: 'CA',
+    currency: 'CAD'
   });
 
   const [errors, setErrors] = useState({});
 
-  const formatCardNumber = (value) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    const matches = v.match(/\d{4,16}/g);
-    const match = (matches && matches[0]) || '';
-    const parts = [];
-
-    for (let i = 0, len = match.length; i < len; i += 4) {
-      parts.push(match.substring(i, i + 4));
-    }
-
-    if (parts.length) {
-      return parts.join(' ');
-    } else {
-      return value;
-    }
-  };
-
-  const formatExpiryDate = (value) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    if (v.length >= 2) {
-      return `${v.substring(0, 2)}/${v.substring(2, 4)}`;
-    }
-    return v;
+  const isValidEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
   };
 
   const validateForm = () => {
     const newErrors = {};
 
-    // Card Name validation
     if (!formData.cardName.trim()) {
-      newErrors.cardName = 'Cardholder name is required';
+      newErrors.cardName = 'Name is required';
     }
-
-    // Card Number validation
-    const cardNumberClean = formData.cardNumber.replace(/\s/g, '');
-    if (!cardNumberClean) {
-      newErrors.cardNumber = 'Card number is required';
-    } else if (!/^\d{16}$/.test(cardNumberClean)) {
-      newErrors.cardNumber = 'Please enter a valid 16-digit card number';
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!isValidEmail(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
     }
-
-    // Expiry Date validation
-    if (!formData.expiryDate) {
-      newErrors.expiryDate = 'Expiry date is required';
-    } else {
-      const [month, year] = formData.expiryDate.split('/');
-      const currentYear = new Date().getFullYear() % 100;
-      const currentMonth = new Date().getMonth() + 1;
-
-      if (!/^\d\d\/\d\d$/.test(formData.expiryDate) ||
-          parseInt(month) < 1 || 
-          parseInt(month) > 12 ||
-          (parseInt(year) < currentYear || 
-          (parseInt(year) === currentYear && parseInt(month) < currentMonth))) {
-        newErrors.expiryDate = 'Please enter a valid future expiry date (MM/YY)';
-      }
+    if (!formData.address.trim()) {
+      newErrors.address = 'Address is required';
     }
-
-    // CVV validation
-    if (!formData.cvv) {
-      newErrors.cvv = 'CVV is required';
-    } else if (!/^\d{3,4}$/.test(formData.cvv)) {
-      newErrors.cvv = 'Please enter a valid CVV';
+    if (!formData.city.trim()) {
+      newErrors.city = 'City is required';
+    }
+    if (!formData.state.trim()) {
+      newErrors.state = 'State/Province is required';
+    }
+    if (!formData.postalCode.trim()) {
+      newErrors.postalCode = 'Postal code is required';
     }
 
     setErrors(newErrors);
@@ -94,19 +69,9 @@ const PaymentForm = ({ onSubmit, initialData }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    let formattedValue = value;
-
-    if (name === 'cardNumber') {
-      formattedValue = formatCardNumber(value);
-    } else if (name === 'expiryDate') {
-      formattedValue = formatExpiryDate(value);
-    } else if (name === 'cvv') {
-      formattedValue = value.replace(/\D/g, '').slice(0, 4);
-    }
-
     setFormData(prev => ({
       ...prev,
-      [name]: formattedValue
+      [name]: value
     }));
 
     if (errors[name]) {
@@ -117,18 +82,54 @@ const PaymentForm = ({ onSubmit, initialData }) => {
     }
   };
 
-  const handleSubmit = (e) => {
-    e?.preventDefault();
-    if (validateForm()) {
-      const paymentData = {
-        cardName: formData.cardName,
-        cardNumber: formData.cardNumber.replace(/\s/g, ''),
-        expiryDate: formData.expiryDate,
-      };
-      console.log('Submitting payment data:', paymentData);
-      onSubmit(paymentData);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+
+    try {
+      const { error, paymentMethod } = await stripe.createPaymentMethod({
+        type: 'card',
+        card: elements.getElement(CardElement),
+        billing_details: {
+          name: formData.cardName,
+          email: formData.email,
+          address: {
+            line1: formData.address,
+            city: formData.city,
+            state: formData.state,
+            postal_code: formData.postalCode,
+            country: formData.country,
+          },
+        },
+      });
+
+      if (error) {
+        setErrors(prev => ({ ...prev, stripe: error.message }));
+        return;
+      }
+
+      await onSubmit({
+        paymentMethodId: paymentMethod.id,
+        currency: formData.currency,
+        billingDetails: {
+          name: formData.cardName,
+          email: formData.email,
+          address: {
+            line1: formData.address,
+            city: formData.city,
+            state: formData.state,
+            postal_code: formData.postalCode,
+            country: formData.country,
+          },
+        }
+      });
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      setErrors(prev => ({ ...prev, stripe: 'An unexpected error occurred' }));
     }
   };
+
 
   return (
     <Box component="form" onSubmit={handleSubmit} noValidate>
@@ -137,6 +138,7 @@ const PaymentForm = ({ onSubmit, initialData }) => {
       </Typography>
 
       <Grid container spacing={3}>
+        {/* Billing Information */}
         <Grid item xs={12}>
           <FormControl fullWidth error={!!errors.cardName}>
             <TextField
@@ -154,83 +156,150 @@ const PaymentForm = ({ onSubmit, initialData }) => {
         </Grid>
 
         <Grid item xs={12}>
-          <FormControl fullWidth error={!!errors.cardNumber}>
+          <FormControl fullWidth error={!!errors.email}>
             <TextField
               required
-              name="cardNumber"
-              label="Card Number"
-              value={formData.cardNumber}
+              name="email"
+              label="Email"
+              type="email"
+              value={formData.email}
               onChange={handleChange}
-              error={!!errors.cardNumber}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <CreditCardIcon />
-                  </InputAdornment>
-                ),
-              }}
+              error={!!errors.email}
             />
-            {errors.cardNumber && (
-              <FormHelperText>{errors.cardNumber}</FormHelperText>
+            {errors.email && (
+              <FormHelperText>{errors.email}</FormHelperText>
+            )}
+          </FormControl>
+        </Grid>
+
+        <Grid item xs={12}>
+          <FormControl fullWidth error={!!errors.address}>
+            <TextField
+              required
+              name="address"
+              label="Address"
+              value={formData.address}
+              onChange={handleChange}
+              error={!!errors.address}
+            />
+            {errors.address && (
+              <FormHelperText>{errors.address}</FormHelperText>
             )}
           </FormControl>
         </Grid>
 
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth error={!!errors.expiryDate}>
+          <FormControl fullWidth error={!!errors.city}>
             <TextField
               required
-              name="expiryDate"
-              label="Expiry Date"
-              value={formData.expiryDate}
+              name="city"
+              label="City"
+              value={formData.city}
               onChange={handleChange}
-              error={!!errors.expiryDate}
-              placeholder="MM/YY"
+              error={!!errors.city}
             />
-            {errors.expiryDate && (
-              <FormHelperText>{errors.expiryDate}</FormHelperText>
+            {errors.city && (
+              <FormHelperText>{errors.city}</FormHelperText>
             )}
           </FormControl>
         </Grid>
 
         <Grid item xs={12} sm={6}>
-          <FormControl fullWidth error={!!errors.cvv}>
+          <FormControl fullWidth error={!!errors.state}>
             <TextField
               required
-              name="cvv"
-              label="CVV"
-              value={formData.cvv}
+              name="state"
+              label="State/Province"
+              value={formData.state}
               onChange={handleChange}
-              error={!!errors.cvv}
-              type="password"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <LockIcon />
-                  </InputAdornment>
-                ),
-              }}
+              error={!!errors.state}
             />
-            {errors.cvv && (
-              <FormHelperText>{errors.cvv}</FormHelperText>
+            {errors.state && (
+              <FormHelperText>{errors.state}</FormHelperText>
             )}
           </FormControl>
+        </Grid>
+
+        <Grid item xs={12} sm={6}>
+          <FormControl fullWidth error={!!errors.postalCode}>
+            <TextField
+              required
+              name="postalCode"
+              label="Postal Code"
+              value={formData.postalCode}
+              onChange={handleChange}
+              error={!!errors.postalCode}
+            />
+            {errors.postalCode && (
+              <FormHelperText>{errors.postalCode}</FormHelperText>
+            )}
+          </FormControl>
+        </Grid>
+
+        <Grid item xs={12} sm={6}>
+          <FormControl fullWidth>
+            <Select
+              name="country"
+              value={formData.country}
+              onChange={handleChange}
+            >
+              <MenuItem value="CA">Canada</MenuItem>
+              <MenuItem value="US">United States</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+
+        {/* Card Details */}
+        <Grid item xs={12}>
+          <Typography variant="subtitle1" gutterBottom>
+            Card Information
+          </Typography>
+          <Box
+            sx={{
+              border: '1px solid',
+              borderColor: errors.stripe ? 'error.main' : 'divider',
+              borderRadius: 1,
+              p: 2
+            }}
+          >
+            <CardElement
+              options={{
+                style: {
+                  base: {
+                    fontSize: '16px',
+                    color: '#424770',
+                    '::placeholder': {
+                      color: '#aab7c4',
+                    },
+                  },
+                  invalid: {
+                    color: '#9e2146',
+                  },
+                },
+              }}
+            />
+          </Box>
+          {errors.stripe && (
+            <FormHelperText error>{errors.stripe}</FormHelperText>
+          )}
         </Grid>
       </Grid>
+
       <Button 
         variant="contained" 
-        onClick={handleSubmit}
-        sx={{ mt: 2 }}
+        type="submit"
+        disabled={!stripe}
+        sx={{ mt: 3 }}
       >
-        Confirm Payment Details
+        Confirm Payment
       </Button>
     </Box>
   );
 };
 
-export default PaymentForm;
-
 PaymentForm.propTypes = {
   onSubmit: PropTypes.func.isRequired,
   initialData: PropTypes.object
 };
+
+export default PaymentForm;

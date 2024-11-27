@@ -1,7 +1,7 @@
-import { Routes, Route, Link } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import Dashboard from './Dashboard';
 import Inventory from './Inventory';
-
+import PortalNav from '@/components/Layout/PortalNav';
 // Ishaan
 /*
   implement inventoryservice to:
@@ -17,18 +17,19 @@ import Inventory from './Inventory';
 export default function StaffPortal() {
   
   return (
-    <div>
-      <h1>Staff portal</h1>
+    <>
 
-      <nav>
-        <Link to="inventory">Inventory</Link>
-      </nav>
+      <PortalNav links={[
+        { to: '/staff/dashboard', label: 'Dashboard' },
+        { to: '/staff/inventory', label: 'Inventory' }
+      ]} />
 
       <Routes>
-        <Route path="/" element={<Inventory />} />
+        <Route path="/" element={<Dashboard />} />
         <Route path="/inventory" element={<Inventory />} />
+        <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
-    </div>
+    </>
 
     
   );

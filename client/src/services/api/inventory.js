@@ -10,7 +10,7 @@ export const inventoryService = {
     return data
   },
 
-  // Update itams in inventory
+  // Update items in inventory
   updateItem: async (id, updates) => {
     const {data, error} = await supabase
       .from('products')

@@ -546,5 +546,11 @@
         "strip-ansi@7.1.0"
       ]
     }
+  },
+  "remote": {
+    "https://esm.sh/standardwebhooks@1.0.0": "8738bff80210a0144cb3aea0e6646eb47d127812bc6c3ef067ada731ee22ed86",
+    "https://esm.sh/v135/@stablelib/base64@1.0.1/denonext/base64.mjs": "2aa9927b4f4e9ae456aa7e03f730c6c715d90cece8e54d7a09ca1fe9d894e966",
+    "https://esm.sh/v135/fast-sha256@1.3.0/denonext/fast-sha256.mjs": "580bba94ab81b091a8bfb1c933a8f18e7b186ee96e3fc70c19fcc2d888a5bcb4",
+    "https://esm.sh/v135/standardwebhooks@1.0.0/denonext/standardwebhooks.mjs": "f32c55607cf6f0df49177f960796b43014004b80f904ced5da801b1446986b71"
   }
 }

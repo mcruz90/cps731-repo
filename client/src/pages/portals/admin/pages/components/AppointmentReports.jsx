@@ -20,6 +20,7 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { reportService } from '@/services/api/reports';
 
+// Admin can pull reports on appointment statistics and revenue
 function AppointmentReports() {
   const [activeTab, setActiveTab] = useState(0);
   const [reportData, setReportData] = useState(null);
@@ -27,6 +28,7 @@ function AppointmentReports() {
   const [error, setError] = useState(null);
   const [expandedService, setExpandedService] = useState(null);
 
+  // use reportService to fetch appointment reports
   const fetchReportData = useCallback(async () => {
     try {
       setLoading(true);
@@ -49,6 +51,7 @@ function AppointmentReports() {
     setExpandedService(isExpanded ? serviceType : null);
   };
 
+  // render appointment details for each service type
   const renderAppointmentDetails = (appointments) => {
     if (!appointments?.length) {
       return <Typography color="text.secondary">No appointment details available</Typography>;
@@ -96,12 +99,12 @@ function AppointmentReports() {
     );
   };
 
+  // render the appropriate report content based on the active tab
   const renderReportContent = () => {
     if (loading) return <CircularProgress />;
     if (error) return <Alert severity="error">{error}</Alert>;
     if (!reportData) return <Alert severity="info">No data available</Alert>;
 
-    // Render the appropriate report content based on the active tab
     switch (activeTab) {
       // Appointment Statistics
       case 0:

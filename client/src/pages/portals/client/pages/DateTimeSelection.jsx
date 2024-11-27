@@ -15,42 +15,32 @@ import { LocalizationProvider, DateCalendar } from '@mui/x-date-pickers';
 import { format, addDays, parseISO } from 'date-fns';
 import { BookingService } from '@/services/api/booking';
 
-
 export default function DateTimeSelection({ 
   onDateTimeSelect, 
   selectedDate,
   selectedTime,
-  serviceId 
+  serviceId
 }) {
   const [availableTimes, setAvailableTimes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [practitioner, setPractitioner] = useState(null);
 
-  // Debug mount and props
   useEffect(() => {
-    console.log('DateTimeSelection mounted with props:', {
-      selectedDate,
-      selectedTime,
-      serviceId
-    });
-  }, [selectedDate, selectedTime, serviceId]);
+    if (!serviceId || !selectedDate) return;
 
-  // Fetch practitioner and availability
-  useEffect(() => {
-    if (!serviceId) return;
-
-    const fetchData = async () => {
+    const fetchAvailability = async () => {
       setLoading(true);
       try {
-        console.log('Fetching data for serviceId:', serviceId);
-        const response = await BookingService.getServiceAvailability(serviceId);
-        console.log('BookingService response:', response);
+        const response = await BookingService.getServiceAvailability(
+          serviceId, 
+          selectedDate
+        );
+        console.log('Availability response:', response);
         
-        if (response.practitioner) {
-          setPractitioner(response.practitioner);
-          // some hardcoded values for testing
-          setAvailableTimes(['10:00', '14:00']);
+        if (response.success && response.availableTimes) {
+          setAvailableTimes(response.availableTimes);
+        } else {
+          setError(response.error || 'No availability data returned');
         }
       } catch (err) {
         console.error('Error:', err);
@@ -60,17 +50,22 @@ export default function DateTimeSelection({
       }
     };
 
-    fetchData();
-  }, [serviceId]);
+    fetchAvailability();
+  }, [serviceId, selectedDate]);
 
   const handleDateSelect = (newDate) => {
     console.log('Date selected:', newDate);
-    onDateTimeSelect(newDate, null, practitioner?.id, practitioner?.name);
+    onDateTimeSelect(newDate, null, null, null);
   };
 
-  const handleTimeSelect = (time) => {
-    console.log('Time selected:', time);
-    onDateTimeSelect(selectedDate, time, practitioner?.id, practitioner?.name);
+  const handleTimeSelect = (timeSlot) => {
+    console.log('Time slot selected:', timeSlot);
+    onDateTimeSelect(
+      selectedDate, 
+      timeSlot.startTime, 
+      timeSlot.practitionerId, 
+      timeSlot.practitionerName
+    );
   };
 
   if (loading) {
@@ -102,16 +97,47 @@ export default function DateTimeSelection({
                 <Typography variant="h6" gutterBottom>
                   Available Times for {format(selectedDate, 'EEEE, MMMM d')}
                 </Typography>
-                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 1 }}>
-                  {availableTimes.map((time) => (
-                    <Button
-                      key={time}
-                      variant={selectedTime === time ? "contained" : "outlined"}
-                      onClick={() => handleTimeSelect(time)}
-                    >
-                      {format(parseISO(`2000-01-01T${time}`), 'h:mm a')}
-                    </Button>
-                  ))}
+                <Box sx={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', 
+                  gap: 1 
+                }}>
+                  {availableTimes.length > 0 ? (
+                    availableTimes.map((timeSlot) => (
+                      <Button
+                        key={`${timeSlot.practitionerId}-${timeSlot.startTime}-${timeSlot.slotId}`}
+                        variant={selectedTime === timeSlot.startTime ? "contained" : "outlined"}
+                        onClick={() => handleTimeSelect(timeSlot)}
+                        sx={{ 
+                          justifyContent: 'flex-start', 
+                          textAlign: 'left',
+                          p: 1.5,
+                          height: 'auto',
+                          whiteSpace: 'normal'
+                        }}
+                      >
+                        <Box>
+                          <Typography variant="button" display="block">
+                            {format(parseISO(`2000-01-01T${timeSlot.startTime}`), 'h:mm a')}
+                          </Typography>
+                          {timeSlot.practitionerName && (
+                            <Typography 
+                              variant="caption" 
+                              display="block" 
+                              color="text.secondary"
+                              sx={{ mt: 0.5 }}
+                            >
+                              with {timeSlot.practitionerName}
+                            </Typography>
+                          )}
+                        </Box>
+                      </Button>
+                    ))
+                  ) : (
+                    <Typography color="text.secondary">
+                      No available times for this date
+                    </Typography>
+                  )}
                 </Box>
               </>
             ) : (

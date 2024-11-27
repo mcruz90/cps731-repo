@@ -20,6 +20,18 @@ import { useFormValidation } from '@/hooks/useFormValidation';
 import { FormField } from '@/components/UI/FormField';
 import { authService } from '@/services/api/auth';
 
+const validationRules = {
+    email: (value) => {
+        if (!value) return 'Email is required';
+        if (!/\S+@\S+\.\S+/.test(value)) return 'Invalid email format';
+        return '';
+    },
+    password: (value) => {
+        if (!value) return 'Password is required';
+        return '';
+    }
+};
+
 export default function Login() {
     console.log('Login component rendering');
 
@@ -35,22 +47,37 @@ export default function Login() {
         errors,
         handleChange,
         handleBlur,
-        validateForm,
-        isSubmitted,
         setErrors
     } = useFormValidation({
         email: '',
         password: '',
-    }, {
-        isRegistering: false
-    });
+    }, validationRules);
 
     const handleLoginSubmit = async (e) => {
         e.preventDefault();
         
-        const isValid = validateForm();
-        if (!isValid) return;
-
+        // Validate form fields
+        let hasErrors = false;
+        const newErrors = {};
+        
+        if (!values.email) {
+            newErrors.email = 'Email is required';
+            hasErrors = true;
+        } else if (!/\S+@\S+\.\S+/.test(values.email)) {
+            newErrors.email = 'Invalid email format';
+            hasErrors = true;
+        }
+        
+        if (!values.password) {
+            newErrors.password = 'Password is required';
+            hasErrors = true;
+        }
+        
+        if (hasErrors) {
+            setErrors(newErrors);
+            return;
+        }
+        
         try {
             const result = await login(values.email, values.password);
             if (result?.user) {
@@ -144,7 +171,7 @@ export default function Login() {
                     value={values.email}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    error={isSubmitted ? errors.email : undefined}
+                    error={errors.email}
                     type="email"
                     required
                 />
@@ -155,7 +182,7 @@ export default function Login() {
                     value={values.password}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    error={isSubmitted ? errors.password : undefined}
+                    error={errors.password}
                     type="password"
                     required
                 />

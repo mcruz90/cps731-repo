@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { styled } from '@mui/material/styles';
 import CartButton from './CartButton';
 
+// Styled components for navbar links
 const NavLink = styled(Link)(({ theme }) => ({
   color: theme.palette.text.primary,
   textDecoration: 'none',
@@ -24,6 +25,7 @@ const NavLink = styled(Link)(({ theme }) => ({
   }
 }));
 
+// Styled components for navbar buttons
 const StyledButton = styled(Button)(({ theme }) => ({
   color: theme.palette.text.primary,
   fontWeight: 500,
@@ -41,11 +43,13 @@ const StyledButton = styled(Button)(({ theme }) => ({
   }
 }));
 
+// Navbar component to render the appropriate links depending on the user's authentication state (i.e. logged in or not and their role)
 const Navbar = () => {
   const { isAuthenticated, userRole, logout, loadingState } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState(null);
 
+  // Logout function uses the logout function from the useAuth hook and redirects the user to the home page
   const handleLogout = async () => {
     try {
       await logout();
@@ -56,6 +60,7 @@ const Navbar = () => {
     }
   };
 
+  // Render the appropriate navbar items depending on the user's authentication state
   const renderNavItems = () => {
     if (!isAuthenticated) {
       return (
@@ -77,16 +82,18 @@ const Navbar = () => {
       );
     }
 
-
+  
     return (
       <Box sx={{ display: 'flex', alignItems: 'center' }}>
         
+        {/* Navbar links */}
         <StyledButton 
           component={NavLink} 
           to="/about"
         >
           About
         </StyledButton>
+        {/* only show the cart button if the user is a client */}
         {userRole === 'client' && <CartButton />}
         <StyledButton 
           onClick={handleLogout}
@@ -97,6 +104,7 @@ const Navbar = () => {
             gap: 1 
           }}
         >
+          {/* show a loading spinner if the logout is in progress */}
           {loadingState?.logout ? (
             <CircularProgress size={20} color="inherit" />
           ) : (

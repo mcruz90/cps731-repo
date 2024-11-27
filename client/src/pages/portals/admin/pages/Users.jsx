@@ -4,8 +4,8 @@ import PortalLayout from '@/components/Layout/PortalLayout';
 import { adminService } from '@/services/api/admin';
 import UserFilters from './components/UserFilters';
 import UsersTable from './components/UsersTable';
-import EditUserDialog from './components/EditUserDialog';
-import ActionConfirmDialog from './components/ActionConfirmDialog';
+import EditUserDialog from './components/dialogs/EditUserDialog';
+import ActionConfirmDialog from './components/dialogs/ActionConfirmDialog';
 
 const Users = () => {
   const [users, setUsers] = useState([]);

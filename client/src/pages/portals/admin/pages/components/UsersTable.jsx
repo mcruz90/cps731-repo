@@ -17,6 +17,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import BlockIcon from '@mui/icons-material/Block';
 import DeleteIcon from '@mui/icons-material/Delete';
 
+// displays the users in a table
 const UsersTable = ({ users = [], onEditClick, onActionClick }) => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -46,6 +47,7 @@ const UsersTable = ({ users = [], onEditClick, onActionClick }) => {
               <TableCell>Phone</TableCell>
               <TableCell>City</TableCell>
               <TableCell>Status</TableCell>
+              <TableCell>Specialization</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -76,6 +78,7 @@ const UsersTable = ({ users = [], onEditClick, onActionClick }) => {
                     size="small"
                   />
                 </TableCell>
+                <TableCell>{user.specializations}</TableCell>
                 <TableCell align="right">
                   <Tooltip title="Edit">
                     <IconButton 

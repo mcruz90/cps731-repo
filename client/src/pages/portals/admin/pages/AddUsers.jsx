@@ -12,11 +12,11 @@ import {
   Typography, 
   Alert, 
   Snackbar,
-  Grid,
   Divider,
   FormControlLabel,
   Switch
 } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 import { adminService } from '@/services/api/admin';
 import { Link } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -24,6 +24,7 @@ import PortalLayout from '@/components/Layout/PortalLayout';
 import { useFormValidation } from '@/hooks/useFormValidation';
 import FormField from '@/components/UI/FormField';
 
+// PUT THIS ON THE BACKBURNER FOR NOW, SEND-EMAIL FUNCTIONALITY NOT IMPLEMENTED YET?? may have to ditch it
 const AddUsers = () => {
   const initialValues = {
     firstName: '',
@@ -31,7 +32,6 @@ const AddUsers = () => {
     email: '',
     phone: '',
     role: '',
-    password: '',
     address: '',
     city: '',
     province: '',
@@ -59,8 +59,10 @@ const AddUsers = () => {
   const [success, setSuccess] = useState(false);
 
   const onSubmit = async (formData) => {
+    console.log('Starting form submission with data:', formData);
     setLoading(true);
     try {
+      console.log('Calling adminService.createUser with:', formData);
       const result = await adminService.createUser(formData);
       console.log('User created successfully:', result);
       setSuccess(true);
@@ -91,7 +93,11 @@ const AddUsers = () => {
             Add New Staff Member
           </Typography>
           
-          <form onSubmit={(e) => handleSubmit(e, onSubmit)}>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            console.log('Form submitted, values:', values);
+            handleSubmit(e, onSubmit);
+          }}>
             <Box sx={{ mb: 4 }}>
               <Typography variant="h6" color="primary" gutterBottom>
                 Basic Information
@@ -155,17 +161,6 @@ const AddUsers = () => {
                       <MenuItem value="admin">Admin</MenuItem>
                     </Select>
                   </FormControl>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    label="Temporary Password"
-                    name="password"
-                    type="password"
-                    value={values.password}
-                    onChange={handleChange}
-                    fullWidth
-                    required
-                  />
                 </Grid>
                 <Grid item xs={12}>
                   <FormControl fullWidth>
@@ -311,7 +306,7 @@ const AddUsers = () => {
             autoHideDuration={6000} 
             onClose={() => setSuccess(false)}
           >
-            <Alert severity="success">
+            <Alert severity="success" onClose={() => setSuccess(false)}>
               Staff member added successfully!
             </Alert>
           </Snackbar>
@@ -321,7 +316,7 @@ const AddUsers = () => {
             autoHideDuration={6000} 
             onClose={() => setError(null)}
           >
-            <Alert severity="error">
+            <Alert severity="error" onClose={() => setError(null)}>
               {error}
             </Alert>
           </Snackbar>

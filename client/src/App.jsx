@@ -3,6 +3,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import Navbar from './components/Navbar/Navbar';
 import { routes } from './router';
+import SetPassword from './pages/SetPassword';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
               element={route.element}
             />
           ))}
+          <Route path="/set-password" element={<SetPassword />} />
         </Routes>
       </Router>
     </LocalizationProvider>

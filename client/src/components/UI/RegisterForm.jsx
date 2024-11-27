@@ -1,11 +1,19 @@
-import { useNavigate } from 'react-router-dom';
-import { Button, Grid } from '@mui/material';
-import { useFormValidation } from '@/hooks/useFormValidation';
-import FormField from '@/components/UI/FormField';
-import { authService } from '@/services/api/auth';
 import { useState } from 'react';
-import { Alert } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 
+// UI-related imports
+import { Button, Alert } from '@mui/material';
+import Grid from '@mui/material/Grid2';
+import FormField from '@/components/UI/FormField';
+
+// Form validation hook
+import { useFormValidation } from '@/hooks/useFormValidation';
+
+// authentication API service
+import { authService } from '@/services/api/auth';
+
+
+// set empty initial values for the form fields
 const initialValues = {
     email: '',
     password: '',
@@ -19,6 +27,7 @@ const initialValues = {
     postal_code: '',
 };
 
+// Register form component to handle the registration of a new user
 const RegisterForm = () => {
     const navigate = useNavigate();
     const [registrationError, setRegistrationError] = useState('');
@@ -30,6 +39,7 @@ const RegisterForm = () => {
         handleSubmit,
     } = useFormValidation(initialValues, { isRegistering: true });
 
+    // onSubmit function to handle the registration of a new user
     const onSubmit = async (formValues) => {
         try {
             setRegistrationError('');
@@ -45,6 +55,7 @@ const RegisterForm = () => {
     };
 
     return (
+        // form to handle the registration of a new user
         <form onSubmit={(e) => handleSubmit(e, onSubmit)}>
             {registrationError && (
                 <Alert severity="error" sx={{ mb: 2 }}>

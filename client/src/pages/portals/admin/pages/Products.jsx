@@ -1,118 +1,38 @@
-import { useState, useEffect } from 'react';
-import { 
-  Typography,
+import { useState } from 'react';
+import {
   Box,
   CircularProgress,
   Alert,
-  Paper,
-  TableContainer,
-  Table,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableBody,
-  TablePagination,
-  IconButton,
-  Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  TextField as SearchField,
-  InputAdornment,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Tooltip,
+  Snackbar,
 } from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import AddIcon from '@mui/icons-material/Add';
-import { adminService } from '@/services/api/admin';
-import ProductDialog from './components/ProductDialog';
-import SearchIcon from '@mui/icons-material/Search';
-import SortIcon from '@mui/icons-material/Sort';
-import { styled } from '@mui/material/styles';
-
-const ProfitCell = styled(TableCell)(({ theme, profitMargin }) => ({
-  color: profitMargin === 0 
-    ? theme.palette.text.primary
-    : profitMargin < 30 
-      ? theme.palette.error.main 
-      : theme.palette.success.main,
-  fontWeight: 'bold'
-}));
+import ProductsHeader from './components/ProductsHeader';
+import ProductsFilters from './components/ProductsFilters';
+import ProductsTable from './components/ProductsTable';
+import ProductDialog from './components/dialogs/ProductDialog';
+import DeleteConfirmationDialog from './components/dialogs/DeleteConfirmationDialog';
+import useProducts from '../hooks/useProducts'
 
 const Products = () => {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const {
+    filteredProducts,
+    loading,
+    error,
+    page,
+    rowsPerPage,
+    filters,
+    handleFilterChange,
+    handleChangePage,
+    handleChangeRowsPerPage,
+    updateProduct,
+    createProduct,
+    deleteProduct,
+  } = useProducts();
+
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [filters, setFilters] = useState({
-    search: '',
-    sortBy: 'name',
-    sortOrder: 'asc'
-  });
-  const [filteredProducts, setFilteredProducts] = useState([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
-
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  useEffect(() => {
-    let result = [...products];
-
-    if (filters.search) {
-      const searchTerm = filters.search.toLowerCase();
-      result = result.filter(product => 
-        product.name.toLowerCase().includes(searchTerm) ||
-        product.description.toLowerCase().includes(searchTerm)
-      );
-    }
-
-    result.sort((a, b) => {
-      let comparison = 0;
-      switch (filters.sortBy) {
-        case 'name':
-          comparison = a.name.localeCompare(b.name);
-          break;
-        case 'price':
-          comparison = a.price - b.price;
-          break;
-        case 'quantity':
-          comparison = a.quantity - b.quantity;
-          break;
-        case 'profit':
-          comparison = Number(a.profit_margin) - Number(b.profit_margin);
-          break;
-        default:
-          comparison = 0;
-      }
-      return filters.sortOrder === 'asc' ? comparison : -comparison;
-    });
-
-    setFilteredProducts(result);
-    setPage(0);
-  }, [products, filters]);
-
-  const fetchProducts = async () => {
-    try {
-      const data = await adminService.getAllProducts();
-      setProducts(data);
-      setError(null);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleEditClick = (product) => {
     setSelectedProduct(product);
@@ -125,38 +45,23 @@ const Products = () => {
 
   const handleSaveEdit = async (editedData) => {
     try {
-      const updateData = {
-        name: editedData.name,
-        description: editedData.description,
-        price: editedData.price,
-        quantity: editedData.quantity,
-        supply_cost: editedData.supply_cost
-      };
-      await adminService.updateProduct(selectedProduct.id, updateData);
-      await fetchProducts();
+      await updateProduct(selectedProduct.id, editedData);
       setEditDialogOpen(false);
       setSelectedProduct(null);
     } catch (err) {
-      setError(err.message);
+      console.error('Error updating product:', err);
+      <Snackbar open={true} message="Error updating product" />
     }
   };
 
   const handleAddProduct = async (productData) => {
     try {
-      await adminService.createProduct(productData);
-      await fetchProducts();
+      await createProduct(productData);
       setAddDialogOpen(false);
     } catch (err) {
-      setError(err.message);
+      console.error('Error creating product:', err);
+      <Snackbar open={true} message="Error creating product" />
     }
-  };
-
-  const handleFilterChange = (event) => {
-    const { name, value } = event.target;
-    setFilters(prev => ({
-      ...prev,
-      [name]: value
-    }));
   };
 
   const handleDeleteClick = (product) => {
@@ -166,12 +71,12 @@ const Products = () => {
 
   const handleConfirmDelete = async () => {
     try {
-      await adminService.deleteProduct(productToDelete.id);
-      await fetchProducts();
+      await deleteProduct(productToDelete.id);
       setDeleteDialogOpen(false);
       setProductToDelete(null);
     } catch (err) {
-      setError(err.message);
+      console.error('Error deleting product:', err);
+      <Snackbar open={true} message="Error deleting product" />
     }
   };
 
@@ -180,131 +85,19 @@ const Products = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
-        <Typography variant="h5">Products Management</Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleAddClick}
-        >
-          Add Product
-        </Button>
-      </Box>
+      <ProductsHeader onAddClick={handleAddClick} />
 
-      <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
-        <SearchField
-          name="search"
-          value={filters.search}
-          onChange={handleFilterChange}
-          placeholder="Search products..."
-          size="small"
-          sx={{ width: 300 }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
-        <FormControl size="small" sx={{ minWidth: 120 }}>
-          <InputLabel>Sort By</InputLabel>
-          <Select
-            name="sortBy"
-            value={filters.sortBy}
-            onChange={handleFilterChange}
-            label="Sort By"
-            startAdornment={
-              <InputAdornment position="start">
-                <SortIcon />
-              </InputAdornment>
-            }
-          >
-            <MenuItem value="name">Name</MenuItem>
-            <MenuItem value="price">Price</MenuItem>
-            <MenuItem value="quantity">Quantity</MenuItem>
-            <MenuItem value="profit">Profit Margin</MenuItem>
-          </Select>
-        </FormControl>
-        <FormControl size="small" sx={{ minWidth: 120 }}>
-          <InputLabel>Order</InputLabel>
-          <Select
-            name="sortOrder"
-            value={filters.sortOrder}
-            onChange={handleFilterChange}
-            label="Order"
-          >
-            <MenuItem value="asc">Ascending</MenuItem>
-            <MenuItem value="desc">Descending</MenuItem>
-          </Select>
-        </FormControl>
-      </Box>
+      <ProductsFilters filters={filters} onFilterChange={handleFilterChange} />
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Description</TableCell>
-              <TableCell align="right">Price ($)</TableCell>
-              <TableCell align="right">Quantity</TableCell>
-              <TableCell align="right">Supply Cost ($)</TableCell>
-              <TableCell align="right">Profit Margin (%)</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredProducts
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell>{product.name}</TableCell>
-                  <TableCell>{product.description}</TableCell>
-                  <TableCell align="right">{product.price.toFixed(2)}</TableCell>
-                  <TableCell align="right">{product.quantity}</TableCell>
-                  <TableCell align="right">{Number(product.supply_cost).toFixed(2)}</TableCell>
-                  <Tooltip title={
-                    product.profit_margin === 0 
-                      ? "No profit margin" 
-                      : product.profit_margin < 30 
-                        ? "Low profit margin" 
-                        : "Healthy profit margin"
-                  }>
-                    <ProfitCell 
-                      align="right"
-                      profitMargin={Number(product.profit_margin)}
-                    >
-                      {Number(product.profit_margin).toFixed(2)}
-                    </ProfitCell>
-                  </Tooltip>
-                  <TableCell>
-                    <IconButton onClick={() => handleEditClick(product)}>
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton 
-                      color="error" 
-                      onClick={() => handleDeleteClick(product)}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-          </TableBody>
-        </Table>
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 25]}
-          component="div"
-          count={filteredProducts.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={(e, newPage) => setPage(newPage)}
-          onRowsPerPageChange={(e) => {
-            setRowsPerPage(parseInt(e.target.value, 10));
-            setPage(0);
-          }}
-        />
-      </TableContainer>
+      <ProductsTable
+        products={filteredProducts}
+        page={page}
+        rowsPerPage={rowsPerPage}
+        handleChangePage={handleChangePage}
+        handleChangeRowsPerPage={handleChangeRowsPerPage}
+        onEdit={handleEditClick}
+        onDelete={handleDeleteClick}
+      />
 
       <ProductDialog
         open={editDialogOpen}
@@ -321,27 +114,12 @@ const Products = () => {
         mode="add"
       />
 
-      <Dialog
+      <DeleteConfirmationDialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
-      >
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to delete &quot;{productToDelete?.name}&quot;? This action cannot be undone.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button 
-            onClick={handleConfirmDelete} 
-            color="error" 
-            variant="contained"
-          >
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onConfirm={handleConfirmDelete}
+        productName={productToDelete?.name}
+      />
     </Box>
   );
 };
