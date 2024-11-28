@@ -16,7 +16,7 @@ const PractitionerSchedule = () => {
         const data = await fetchPractitionerAppointments(user.id);
         const formattedAppointments = data.map(appointment => ({
           id: appointment.id,
-          title: `Appointment with ${appointment.client_id}`,
+          title: `Appointment with ${appointment.profiles.first_name} ${appointment.profiles.last_name}`,
           start: `${appointment.date}T${appointment.time}`,
           end: `${appointment.date}T${appointment.time}`, // Adjust end time based on duration if needed
           extendedProps: {

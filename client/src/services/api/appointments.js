@@ -19,7 +19,11 @@ export const fetchPractitionerAppointments = async (practitionerId) => {
         created_at,
         updated_at,
         service_id,
-        availability_id
+        availability_id,
+        profiles:client_id (
+          first_name,
+          last_name
+        )
       `)
       .eq('practitioner_id', practitionerId);
 
