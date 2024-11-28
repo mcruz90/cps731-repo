@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { supabase } from './index';
 import { SchedulerSystem } from './scheduler';
 import { formatDate } from '@/utils/dateUtils';
@@ -12,6 +13,40 @@ import { formatDate } from '@/utils/dateUtils';
 // createAppointment, - creates a new appointment
 // getAvailableSlotsForModification, - fetches the available slots for modifying an appointment
 // getAppointmentsByDateRange, - fetches the appointments by date range
+
+const API_URL = 'http://localhost:5000/api';
+
+export const fetchPractitionerAppointments = async (practitionerId) => {
+  try {
+    const { data, error } = await supabase
+      .from('appointments')
+      .select(`
+        id,
+        client_id,
+        practitioner_id,
+        date,
+        time,
+        duration,
+        status,
+        notes,
+        created_at,
+        updated_at,
+        service_id,
+        availability_id,
+        profiles:client_id (
+          first_name,
+          last_name
+        )
+      `)
+      .eq('practitioner_id', practitionerId);
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error fetching practitioner appointments:', error);
+    throw error;
+  }
+};
 
 export const appointmentService = {
 

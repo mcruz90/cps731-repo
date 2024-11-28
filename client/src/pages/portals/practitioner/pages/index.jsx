@@ -1,28 +1,27 @@
-import { Routes, Route, Link} from 'react-router-dom';
+import React from 'react';
+import { Routes, Route } from 'react-router-dom';
+import PortalNav from '@/components/Layout/PortalNav';
 import Dashboard from './Dashboard';
 import Schedule from './Schedule';
 import Clients from './Clients';
 
-export default function PractitionerPortal() {
-  console.log('PractitionerPortal rendering, current path:', window.location.pathname);
-  
+const PractitionerPortal = () => {
+  const navLinks = [
+    { to: '/practitioner', label: 'Dashboard' },
+    { to: '/practitioner/schedule', label: 'Schedule' },
+    { to: '/practitioner/clients', label: 'Clients' },
+  ];
+
   return (
-      <>
-      <div>
-        <h1>Practitioner Portal</h1>
-
-        <nav>
-          <Link to="/practitioner">Dashboard</Link>
-          <Link to="/practitioner/schedule">Schedule</Link>
-          <Link to="/practitioner/clients">Clients</Link>
-        </nav>
-
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-        <Route path="/schedule" element={<Schedule />} />
-        <Route path="/clients" element={<Clients />} />
+    <>
+      <PortalNav links={navLinks} />
+      <Routes>
+        <Route index element={<Dashboard />} />
+        <Route path="schedule" element={<Schedule />} />
+        <Route path="clients" element={<Clients />} />
       </Routes>
-      </div>
     </>
   );
-}
+};
+
+export default PractitionerPortal;
