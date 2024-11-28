@@ -4,22 +4,37 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { fetchPractitionerAppointments } from '@/services/api/appointments';
+import { useAuth } from '@/hooks/useAuth';
 
 const PractitionerSchedule = () => {
   const [appointments, setAppointments] = useState([]);
+  const { user } = useAuth();
 
   useEffect(() => {
     const loadAppointments = async () => {
       try {
-        const response = await fetchPractitionerAppointments();
-        setAppointments(response.data);
+        const data = await fetchPractitionerAppointments(user.id);
+        const formattedAppointments = data.map(appointment => ({
+          id: appointment.id,
+          title: `Appointment with ${appointment.client_id}`,
+          start: `${appointment.date}T${appointment.time}`,
+          end: `${appointment.date}T${appointment.time}`, // Adjust end time based on duration if needed
+          extendedProps: {
+            duration: appointment.duration,
+            status: appointment.status,
+            notes: appointment.notes,
+          }
+        }));
+        setAppointments(formattedAppointments);
       } catch (error) {
         console.error('Error fetching appointments:', error);
       }
     };
 
-    loadAppointments();
-  }, []);
+    if (user) {
+      loadAppointments();
+    }
+  }, [user]);
 
   return (
     <FullCalendar
