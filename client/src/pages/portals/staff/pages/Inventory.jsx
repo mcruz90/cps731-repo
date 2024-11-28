@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import {
-import { useState, useEffect, useCallback } from "react";
-import {
   TableContainer,
   Table,
   TableHead,
@@ -26,7 +24,6 @@ import EditInventoryItem from "./EditInventoryItem";
 
 const Inventory = () => {
   const [inventory, setInventory] = useState([]);
-  const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingItem, setEditingItem] = useState(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -44,12 +41,10 @@ const Inventory = () => {
   const fetchProducts = useCallback(async () => {
     if (!user) return;
 
-
     try {
       const data = await inventoryService.retrieveInventory();
       setInventory(data);
     } catch (error) {
-      console.error("Error retrieving inventory:", error);
       console.error("Error retrieving inventory:", error);
     } finally {
       setLoading(false);
@@ -74,10 +69,8 @@ const Inventory = () => {
 
   console.log(inventory[0]);
 
-
   return (
     <PortalLayout>
-      <Typography variant='h4' component='h1' gutterBottom>
       <Typography variant='h4' component='h1' gutterBottom>
         Inventory
       </Typography>
@@ -142,28 +135,12 @@ const Inventory = () => {
             setEditingItem(null);
           }}
           onCancel={() => setEditingItem(null)}
-          onCancel={() => setEditingItem(null)}
         />
       ) : (
         <TableContainer>
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>
-                  <strong>Name</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Description</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Price</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Quantity</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Actions</strong>
-                </TableCell>
                 <TableCell>
                   <strong>Name</strong>
                 </TableCell>
@@ -191,9 +168,6 @@ const Inventory = () => {
                   <Button
                     variant='outlined'
                     onClick={() => setEditingItem(product)}>
-                  <Button
-                    variant='outlined'
-                    onClick={() => setEditingItem(product)}>
                     Edit
                   </Button>
 
@@ -205,9 +179,6 @@ const Inventory = () => {
       )}
     </PortalLayout>
   );
-  );
 };
-
-export default Inventory;
 
 export default Inventory;
