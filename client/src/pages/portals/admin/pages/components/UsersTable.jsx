@@ -18,7 +18,7 @@ import BlockIcon from '@mui/icons-material/Block';
 import DeleteIcon from '@mui/icons-material/Delete';
 
 // displays the users in a table
-const UsersTable = ({ users = [], onEditClick, onActionClick }) => {
+const UsersTable = ({ users = [], onEditClick, onActionClick, isPractitionerView }) => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
@@ -42,12 +42,12 @@ const UsersTable = ({ users = [], onEditClick, onActionClick }) => {
           <TableHead>
             <TableRow>
               <TableCell>Name</TableCell>
-              <TableCell>Role</TableCell>
+              {!isPractitionerView && <TableCell>Role</TableCell>}
               <TableCell>Email</TableCell>
               <TableCell>Phone</TableCell>
               <TableCell>City</TableCell>
+              {isPractitionerView && <TableCell>Specialization</TableCell>}
               <TableCell>Status</TableCell>
-              <TableCell>Specialization</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -57,20 +57,25 @@ const UsersTable = ({ users = [], onEditClick, onActionClick }) => {
                 <TableCell>
                   {user.first_name} {user.last_name}
                 </TableCell>
-                <TableCell>
-                  <Chip 
-                    label={user.role} 
-                    color={
-                      user.role === 'admin' ? 'error' :
-                      user.role === 'practitioner' ? 'primary' :
-                      user.role === 'staff' ? 'warning' : 'default'
-                    }
-                    size="small"
-                  />
-                </TableCell>
+                {!isPractitionerView && (
+                  <TableCell>
+                    <Chip 
+                      label={user.role} 
+                      color={
+                        user.role === 'admin' ? 'error' :
+                        user.role === 'practitioner' ? 'primary' :
+                        user.role === 'staff' ? 'warning' : 'default'
+                      }
+                      size="small"
+                    />
+                  </TableCell>
+                )}
                 <TableCell>{user.email}</TableCell>
                 <TableCell>{user.phone}</TableCell>
                 <TableCell>{user.city}</TableCell>
+                {isPractitionerView && (
+                  <TableCell>{user.specializations}</TableCell>
+                )}
                 <TableCell>
                   <Chip 
                     label={user.is_active ? 'Active' : 'Inactive'}
@@ -78,7 +83,6 @@ const UsersTable = ({ users = [], onEditClick, onActionClick }) => {
                     size="small"
                   />
                 </TableCell>
-                <TableCell>{user.specializations}</TableCell>
                 <TableCell align="right">
                   <Tooltip title="Edit">
                     <IconButton 
@@ -128,7 +132,13 @@ const UsersTable = ({ users = [], onEditClick, onActionClick }) => {
 UsersTable.propTypes = {
   users: PropTypes.array,
   onEditClick: PropTypes.func.isRequired,
-  onActionClick: PropTypes.func.isRequired
+  onActionClick: PropTypes.func.isRequired,
+  isPractitionerView: PropTypes.bool
+};
+
+UsersTable.defaultProps = {
+  users: [],
+  isPractitionerView: false
 };
 
 export default UsersTable;

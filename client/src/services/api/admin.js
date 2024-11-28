@@ -46,7 +46,7 @@ export const adminService = {
           city: userData.city,
           province: userData.province,
           postal_code: userData.postalCode,
-          specializations: userData.role === 'practitioner' ? userData.specializations : null,
+          specializations: userData.specializations,
           start_date: ['practitioner', 'staff'].includes(userData.role) ? userData.startDate : null,
           availability_notes: ['practitioner', 'staff'].includes(userData.role) ? userData.availability : null
         }]);
@@ -141,37 +141,40 @@ export const adminService = {
   },
 
   async updateUser(userId, userData) {
+    console.log('Updating user with ID:', userId);
+    console.log('Update data:', userData);
+    
     try {
-      const updatedData = {
-        first_name: userData.firstName.trim(),
-        last_name: userData.lastName.trim(),
+      // Clean up the data before sending to Supabase
+      const cleanData = {
+        first_name: userData.first_name?.trim() || '',
+        last_name: userData.last_name?.trim() || '',
+        email: userData.email?.trim() || '',
         phone: userData.phone?.trim() || null,
-        email: userData.email.trim(),
-        role: userData.role,
-        specializations: userData.specializations?.trim() || null,
-        start_date: userData.startDate || null,
-        availability_notes: userData.availabilityNotes?.trim() || null,
-        address: userData.address?.trim() || null,
         city: userData.city?.trim() || null,
-        province: userData.province?.trim() || null,
-        postal_code: userData.postalCode?.trim() || null,
-        is_active: userData.isActive,
+        role: userData.role || 'client',
+        specializations: userData.specializations?.trim() || null,
+        is_active: userData.is_active ?? true,
         updated_at: new Date().toISOString()
       };
 
-      if (['staff', 'practitioner'].includes(userData.role)) {
-        if (!userData.startDate) {
-          throw new Error('Start date is required for staff and practitioners');
-        }
+      console.log('Cleaned update data:', cleanData);
+
+      
+      const { data, error } = await supabaseAdmin
+        .from('profiles')  
+        .update(cleanData)
+        .eq('id', userId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Supabase update error:', error);
+        throw error;
       }
 
-      const { error } = await supabaseAdmin
-        .from('profiles')
-        .update(updatedData)
-        .eq('id', userId);
-
-      if (error) throw error;
-      return { success: true };
+      console.log('Update successful:', data);
+      return data;
     } catch (error) {
       console.error('Update user error:', error);
       throw new Error(`Failed to update user: ${error.message}`);
@@ -206,7 +209,7 @@ export const adminService = {
       
       const processedData = data.map(user => ({
         ...user,
-        is_active: user.is_active === null ? true : user.is_active
+        is_active: user.is_active === null || user.is_active === undefined ? true : user.is_active
       }));
 
       return processedData;
@@ -361,5 +364,167 @@ export const adminService = {
       console.error('Test user creation error:', error);
       throw new Error(`Failed to create test user: ${error.message}`);
     }
+  },
+
+   // Fetch appointments for a specific availability slot
+   getAppointmentsByAvailability: async (availabilityId) => {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('appointments')
+        .select('*')
+        .eq('availability_id', availabilityId);
+
+      if (error) throw error;
+
+      return data;
+    } catch (error) {
+      console.error('Error fetching appointments:', error);
+      throw error;
+    }
+  },
+
+  // Fetch appointments by practitioner
+  getAppointmentsByPractitioner: async (practitionerId) => {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('appointments')
+        .select('availability_id')
+        .eq('practitioner_id', practitionerId);
+
+      if (error) throw error;
+
+      return data;
+    } catch (error) {
+      console.error('Error fetching appointments:', error);
+      throw error;
+    }
+  },
+
+  getPractitioners: async () => {
+    const { data, error } = await supabaseAdmin
+      .from('profiles')
+      .select('*')
+      .eq('role', 'practitioner')
+      .eq('is_active', true); 
+    if (error) throw error;
+    return data;
+  },
+
+
+  // Fetch practitioner's availability
+  getPractitionerAvailability: async (practitionerId) => {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('availability')
+        .select('*')
+        .eq('practitioner_id', practitionerId)
+        .order('date', { ascending: true });
+
+      if (error) throw error;
+
+      return data;
+    } catch (error) {
+      console.error('Error fetching practitioner availability:', error);
+      throw error;
+    }
+  },
+
+  // Update availability slot
+  updateAvailability: async (editedData) => {
+    // Log the data being sent for debugging
+    console.log('adminService.updateAvailability called with:', editedData);
+
+    // Validate required fields
+    const requiredFields = ['id', 'practitioner_id', 'service_id', 'date', 'start_time', 'end_time', 'is_available'];
+    const missingFields = requiredFields.filter(field => !(field in editedData));
+    if (missingFields.length > 0) {
+      throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+    }
+
+    // Additional validation can be added here (e.g., date and time formats)
+
+    const { data, error } = await supabaseAdmin
+      .from('availability')
+      .update({
+        practitioner_id: editedData.practitioner_id,
+        date: editedData.date,
+        start_time: editedData.start_time,
+        end_time: editedData.end_time,
+        service_id: editedData.service_id,
+        is_available: editedData.is_available
+      })
+      .eq('id', editedData.id)
+      .select(); // Fetch the updated record
+
+    if (error) {
+      console.error('Error updating availability:', error);
+      throw error;
+    }
+
+    console.log('Availability updated successfully:', data);
+    return data;
+  },
+
+  // Delete availability slot
+  deleteAvailability: async (availabilityId) => {
+    try {
+      const { error } = await supabaseAdmin
+        .from('availability')
+        .delete()
+        .eq('id', availabilityId);
+
+      if (error) {
+        if (error.message.includes('violates foreign key constraint')) {
+          throw new Error('Cannot delete this slot as there are existing appointments.');
+        }
+        throw error;
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting availability:', error);
+      throw new Error(error.message || 'Failed to delete availability.');
+    }
+  },
+
+
+   // Toggle availability status
+   toggleAvailabilityStatus: async (availabilityId, newStatus) => {
+    try {
+      const { error } = await supabaseAdmin
+        .from('availability')
+        .update({ is_available: newStatus })
+        .eq('id', availabilityId);
+
+      if (error) throw error;
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error toggling availability status:', error);
+      throw error;
+    }
+  },
+
+  // Fetch services data
+  fetchServicesData: async () => {
+    try {
+      const { data: services, error: servicesError } = await supabaseAdmin
+        .from('services')
+        .select('*');
+
+      if (servicesError) throw servicesError;
+
+      const { data: practitionerServices, error: psError } = await supabaseAdmin
+        .from('practitioner_services')
+        .select('*');
+
+      if (psError) throw psError;
+
+      return { services, practitionerServices };
+    } catch (error) {
+      console.error('Error fetching services data:', error);
+      throw error;
+    }
   }
+
 };

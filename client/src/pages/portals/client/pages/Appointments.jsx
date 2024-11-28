@@ -36,9 +36,10 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Autocomplete from '@mui/material/Autocomplete';
 
 const Appointments = () => {
-  const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [pastAppointments, setPastAppointments] = useState([]);
+  const [upcomingAppointments, setUpcomingAppointments] = useState([]);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [modifyingAppointment, setModifyingAppointment] = useState(null);
   const [modifiedData, setModifiedData] = useState({
@@ -70,14 +71,30 @@ const Appointments = () => {
     setSnackbar((prev) => ({ ...prev, open: false }));
   };
 
-  // fetches the appointments from the database
+  // fetch appointments
   const fetchAppointments = useCallback(async () => {
     if (!user) return;
-    
+  
     try {
       setError(null);
       const data = await appointmentService.getAll(user.id);
-      setAppointments(data);
+  
+      // Separate appointments into upcoming and past
+      const today = new Date().toLocaleString();
+  
+      const upcoming = data.filter(appointment => {
+        const appDate = new Date(appointment.date).toLocaleString();
+        return appDate >= today && appointment.status !== 'cancelled';
+      });
+  
+      const past = data.filter(appointment => {
+        const appDate = new Date(appointment.date).toLocaleString();
+        return appDate < today || appointment.status === 'cancelled';
+      });
+  
+      // Set state for upcoming and past appointments
+      setUpcomingAppointments(upcoming);
+      setPastAppointments(past);
     } catch (error) {
       console.error('Error fetching appointments:', error);
       setError('Failed to load appointments. Please try again later.');
@@ -86,18 +103,18 @@ const Appointments = () => {
     }
   }, [user]);
 
-  // fetches the appointments from the database
+  // fetch appointments when the component mounts
   useEffect(() => {
     fetchAppointments();
   }, [fetchAppointments]);
 
-  // cancels the appointment
+  // cancel appointment
   const handleCancel = async (appointmentId) => {
     try {
       await appointmentService.cancel(appointmentId);
       fetchAppointments();
-      setSelectedAppointment(null);
-      // Show success Snackbar
+        setSelectedAppointment(null);
+      // show success Snackbar
       setSnackbar({
         open: true,
         message: 'Appointment canceled successfully.',
@@ -114,8 +131,7 @@ const Appointments = () => {
       });
     }
   };
-
-  // modifies the appointment
+  // modify appointment
   const handleModify = async () => {
     try {
       if (!modifyingAppointment) return;
@@ -125,7 +141,6 @@ const Appointments = () => {
         date: modifiedData.date.toISOString().split('T')[0],
         time: modifiedData.time,
         notes: modifiedData.notes,
-        // 'status' is handled in the service layer
       };
 
       await appointmentService.modify(modifyingAppointment.id, updates);
@@ -223,6 +238,92 @@ const Appointments = () => {
     return !isAppointmentPast(appointment.date) && appointment.status !== 'cancelled';
   };
 
+    // Function to render appointments table
+    const renderAppointmentsTable = (appointmentsList, title) => (
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
+          {title}
+        </Typography>
+        {appointmentsList.length === 0 ? (
+          <Typography variant="body1">No appointments to display.</Typography>
+        ) : (
+          <TableContainer component={Paper}>
+            <Table sx={{ minWidth: 650 }} aria-label={`${title.toLowerCase()} table`}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Service</TableCell>
+                  <TableCell>Date & Time</TableCell>
+                  <TableCell>Practitioner</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Notes</TableCell>
+                  <TableCell align="right">Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {appointmentsList.map((appointment) => {
+                  const formattedDate = new Date(appointment.date);
+                  const isPast = isAppointmentPast(formattedDate);
+                  return (
+                    <TableRow
+                      key={appointment.id}
+                      sx={{ 
+                        '&:last-child td, &:last-child th': { border: 0 },
+                        opacity: isPast ? 0.6 : 1,
+                        backgroundColor: isPast ? 'action.hover' : 'inherit'
+                      }}
+                    >
+                      <TableCell component="th" scope="row">
+                        {appointment.service_type}
+                      </TableCell>
+                      <TableCell>
+                        <Box>
+                          {formattedDate.toLocaleDateString()}
+                          <br />
+                          <Typography variant="body2" color="text.secondary">
+                            {appointment.time}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>{appointment.practitioner_name}</TableCell>
+                      <TableCell>
+                        <Chip label={appointment.status} color={getStatusColor(appointment.status)} />
+                      </TableCell>
+                      <TableCell>
+                        {appointment.notes || '-'}
+                      </TableCell>
+                      <TableCell align="right">
+                        {canModifyAppointment(appointment) && (
+                          <Stack direction="row" spacing={1} justifyContent="flex-end">
+                            <Tooltip title="Modify Appointment">
+                              <IconButton
+                                size="small"
+                                onClick={() => openModifyDialog(appointment)}
+                              >
+                                <EditIcon />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Cancel Appointment">
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => setSelectedAppointment(appointment)}
+                              >
+                                <CancelIcon />
+                              </IconButton>
+                            </Tooltip>
+                          </Stack>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </Box>
+    );
+
   return (
     <PortalLayout>
       <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -246,78 +347,13 @@ const Appointments = () => {
       {loading ? (
         <Typography>Loading...</Typography>
       ) : (
-        <TableContainer component={Paper}>
-          <Table sx={{ minWidth: 650 }} aria-label="appointments table">
-            <TableHead>
-              <TableRow>
-                <TableCell>Service</TableCell>
-                <TableCell>Date & Time</TableCell>
-                <TableCell>Practitioner</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Notes</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {appointments.map((appointment) => {
-                const isPast = isAppointmentPast(appointment.date);
-                return (
-                  <TableRow
-                    key={appointment.id}
-                    sx={{ 
-                      '&:last-child td, &:last-child th': { border: 0 },
-                      opacity: isPast ? 0.6 : 1,
-                      backgroundColor: isPast ? 'action.hover' : 'inherit'
-                    }}
-                  >
-                    <TableCell component="th" scope="row">
-                      {appointment.service_type}
-                    </TableCell>
-                    <TableCell>
-                      <Box>
-                        {new Date(appointment.date).toLocaleDateString()}
-                        <br />
-                        <Typography variant="body2" color="text.secondary">
-                          {appointment.time}
-                        </Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell>{appointment.practitioner_name}</TableCell>
-                    <TableCell>
-                      <Chip label={appointment.status} color={getStatusColor(appointment.status)} />
-                    </TableCell>
-                    <TableCell>
-                      {appointment.notes || '-'}
-                    </TableCell>
-                    <TableCell align="right">
-                      {canModifyAppointment(appointment) && (
-                        <Stack direction="row" spacing={1} justifyContent="flex-end">
-                          <Tooltip title="Modify Appointment">
-                            <IconButton
-                              size="small"
-                              onClick={() => openModifyDialog(appointment)}
-                            >
-                              <EditIcon />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Cancel Appointment">
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => setSelectedAppointment(appointment)}
-                            >
-                              <CancelIcon />
-                            </IconButton>
-                          </Tooltip>
-                        </Stack>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <>
+          {/* Upcoming Appointments Section */}
+          {renderAppointmentsTable(upcomingAppointments, 'All Upcoming Appointments')}
+
+          {/* Past Appointments Section */}
+          {renderAppointmentsTable(pastAppointments, 'Past and Cancelled Appointments')}
+        </>
       )}
 
       {/* Cancellation Dialog */}

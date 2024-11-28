@@ -11,11 +11,9 @@ import {
 } from '@mui/material';
 import CancelIcon from '@mui/icons-material/Cancel';
 import EditIcon from '@mui/icons-material/Edit';
-import { formatDate } from '@/utils/dateUtils';
 
-// Short-hand list to display the confirmed appointments on client's dashboard
+// List to display only confirmed upcoming appointments
 const AppointmentList = ({ appointments, readOnly }) => {
-  // Filter only confirmed appointments
   const confirmedAppointments = appointments.filter(
     (appointment) => appointment.status.toLowerCase() === 'confirmed'
   );
@@ -31,7 +29,7 @@ const AppointmentList = ({ appointments, readOnly }) => {
   return (
     <List>
       {confirmedAppointments.map((appointment) => {
-        const formattedDate = formatDate(appointment.date);
+        const formattedDate = new Date(appointment.date).toLocaleDateString();
 
         return (
           <React.Fragment key={appointment.id}>
@@ -44,7 +42,6 @@ const AppointmentList = ({ appointments, readOnly }) => {
                       edge="end"
                       aria-label="edit"
                       onClick={() => {
-                        // Handle edit action
                         console.log(`Edit appointment ${appointment.id}`);
                       }}
                     >
@@ -54,7 +51,6 @@ const AppointmentList = ({ appointments, readOnly }) => {
                       edge="end"
                       aria-label="cancel"
                       onClick={() => {
-                        // Handle cancel action
                         console.log(`Cancel appointment ${appointment.id}`);
                       }}
                     >
@@ -65,11 +61,7 @@ const AppointmentList = ({ appointments, readOnly }) => {
               }
             >
               <ListItemText
-                primary={
-                  <Typography variant="h6" component="div">
-                    {appointment.sessionType} with {appointment.instructor}
-                  </Typography>
-                }
+                primary={`${appointment.sessionType} with ${appointment.instructor}`}
                 secondary={
                   <Box>
                     <Typography variant="body2" color="textSecondary">

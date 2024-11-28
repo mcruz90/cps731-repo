@@ -49,16 +49,14 @@ export const appointmentService = {
           )
         `)
         .eq('client_id', clientId)
-        .order('date', { ascending: true });
+        .order('date', { ascending: false })
+        .order('time', { ascending: false });
 
       if (error) throw error;
 
-      // transforms the data to match the calling component's expectations in the AppointmentList component
       return data.map(appointment => ({
-        id: appointment.id,
-        date: appointment.date,
-        time: appointment.time,
-        status: appointment.status,
+        ...appointment,
+        date: appointment.date.split('T')[0],
         service_type: appointment.services.description,
         practitioner_name: `${appointment.practitioner.first_name} ${appointment.practitioner.last_name}`,
         notes: appointment.notes,
@@ -154,7 +152,7 @@ export const appointmentService = {
 
       return data.map(appointment => ({
         id: appointment.id,
-        date: appointment.date,
+        date: appointment.date.split('T')[0],
         time: appointment.time,
         status: appointment.status,
         service_type: appointment.services.name,
