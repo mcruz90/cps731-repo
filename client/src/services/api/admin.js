@@ -7,6 +7,8 @@ import { notificationService } from './notifications';
 
 */
 export const adminService = {
+
+  // admin can create users
   async createUser(userData) {
     console.log('AdminService: createUser called with:', userData);
 
@@ -15,7 +17,6 @@ export const adminService = {
     }
 
     try {
-      // Create auth user
       const { data: authData, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
         email: userData.email,
         email_confirm: true,
@@ -31,7 +32,6 @@ export const adminService = {
       if (signUpError) throw signUpError;
       if (!authData?.user?.id) throw new Error('User creation failed - no user ID returned');
 
-      // Create profile
       const { error: profileError } = await supabaseAdmin
         .from('profiles')
         .insert([{
@@ -59,7 +59,7 @@ export const adminService = {
         throw profileError;
       }
 
-      // Send welcome email
+      // Send welcome email -- BACKBURNER FOR NOW. RESEND NOT WORKING PROPERLY
       if (userData.sendWelcomeEmail) {
         try {
           console.log('Sending welcome email to:', userData.email);
@@ -72,8 +72,6 @@ export const adminService = {
           console.log('Welcome email result:', emailResult);
         } catch (emailError) {
           console.error('Failed to send welcome email:', emailError);
-          // Don't throw here - user is still created even if email fails???????
-          // need to rethink this flow
         }
       }
 
@@ -140,12 +138,12 @@ export const adminService = {
     }
   },
 
+  
   async updateUser(userId, userData) {
     console.log('Updating user with ID:', userId);
     console.log('Update data:', userData);
     
     try {
-      // Clean up the data before sending to Supabase
       const cleanData = {
         first_name: userData.first_name?.trim() || '',
         last_name: userData.last_name?.trim() || '',
@@ -293,10 +291,14 @@ export const adminService = {
 
   // Update existing product
   async updateProduct(productId, productData) {
+    
+    const { profit_margin, ...dataToUpdate } = productData;
+    console.log ('profit_margin', profit_margin);
+
     try {
       const { data, error } = await supabaseAdmin
         .from('products')
-        .update(productData)
+        .update(dataToUpdate)
         .eq('id', productId)
         .select()
         .single();
@@ -325,6 +327,7 @@ export const adminService = {
     }
   },
 
+  // gonna have to use this for now to quickly create users. workflow with edge functions above need to be properly figured out.
   async testManualAddUser(email, password, role = 'practitioner') {
     try {
       const { data: authData, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
@@ -340,7 +343,6 @@ export const adminService = {
       if (signUpError) throw signUpError;
       if (!authData?.user?.id) throw new Error('User creation failed - no user ID returned');
 
-      // Create basic profile
       const { error: profileError } = await supabaseAdmin
         .from('profiles')
         .insert([{

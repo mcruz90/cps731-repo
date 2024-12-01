@@ -1,11 +1,10 @@
-import { supabase } from './index';
+import { supabaseAdmin as supabase } from './adminClient';
 
 export const reportService = {
 
   // Dashboard Summary - updated to show weekly metrics
   async getDashboardSummary() {
     try {
-      // Get start of current week
       const now = new Date();
       const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
       startOfWeek.setHours(0, 0, 0, 0);
@@ -15,11 +14,13 @@ export const reportService = {
         .select(`
           id,
           status,
-          services (
+          services:services!appointments_service_id_fkey (
             price
           )
         `)
         .gte('date', startOfWeek.toISOString().split('T')[0]);
+
+      console.log('Fetched dashboard summary data:', data);
 
       if (error) throw error;
 
@@ -42,134 +43,96 @@ export const reportService = {
     }
   },
 
-  // Appointment Reports - updated to include statistics and revenue analysis
-  async getAppointmentReports(reportType, { 
-    startDate, 
-    endDate, 
-    groupBy = 'month', 
-    practitionerId = null,
-    serviceId = null 
-  } = {}) {
+  // Appointment Reports: statistics and revenue analysis
+  async getAppointmentReports(type, filters = {}) {
+    const { startDate, endDate, practitionerId, serviceId, status } = filters;
+
     try {
+      console.log(`Fetching appointment reports: Type ${type}`, filters);
+
       let query = supabase
         .from('appointments')
         .select(`
           id,
           status,
           date,
+          time,
+          duration,
+          notes,
+          client_id,
+          practitioner_id,
           service_id,
-          services!inner (
+          availability_id,
+          services:services!appointments_service_id_fkey (
             id,
             name,
             price
           ),
-          practitioner_id,
-          profiles!practitioner_id (
+          profiles:profiles!appointments_practitioner_id_fkey (
             id,
             first_name,
             last_name
           )
         `);
 
-      // Apply filters if provided
-      if (startDate) query = query.gte('date', startDate);
-      if (endDate) query = query.lte('date', endDate);
-      if (practitionerId) query = query.eq('practitioner_id', practitionerId);
-      if (serviceId) query = query.eq('service_id', serviceId);
+      if (startDate) {
+        query = query.gte('date', startDate.toISOString().split('T')[0]);
+      }
+      if (endDate) {
+        query = query.lte('date', endDate.toISOString().split('T')[0]);
+      }
+      if (practitionerId) {
+        query = query.eq('practitioner_id', practitionerId);
+      }
+      if (serviceId) {
+        query = query.eq('service_id', serviceId);
+      }
+      if (status && status !== '') {
+        query = query.eq('status', status);
+      }
 
       const { data, error } = await query;
+
       if (error) throw error;
 
-      let statistics = {};
-      let revenueByPeriod = {};
+      console.log('Fetched appointment reports data:', data);
 
-      switch (reportType) {
-        // Appointment Statistics
-        case 0: {
-          statistics = data.reduce((acc, appointment) => {
-            const serviceType = appointment.services?.name || 'Unknown';
-            
-            if (!acc[serviceType]) {
-              acc[serviceType] = {
-                serviceType,
-                totalAppointments: 0,
-                completed: 0,
-                cancelled: 0,
-                revenue: 0,
-                appointments: [] 
-              };
-            }
+      if (type === 0) {
+        
+        const statisticsMap = {};
 
-            acc[serviceType].totalAppointments++;
-            acc[serviceType].appointments.push(appointment);
-            
-            if (appointment.status === 'completed') {
-              acc[serviceType].completed++;
-              acc[serviceType].revenue += appointment.services?.price || 0;
-            } else if (appointment.status === 'cancelled') {
-              acc[serviceType].cancelled++;
-            }
+        data.forEach((appointment) => {
+          const serviceType = appointment.services.name;
+          if (!statisticsMap[serviceType]) {
+            statisticsMap[serviceType] = {
+              serviceType,
+              totalAppointments: 0,
+              completed: 0,
+              cancelled: 0,
+            };
+          }
+          statisticsMap[serviceType].totalAppointments += 1;
+          if (appointment.status === 'completed') {
+            statisticsMap[serviceType].completed += 1;
+          } else if (appointment.status === 'cancelled') {
+            statisticsMap[serviceType].cancelled += 1;
+          }
+        });
 
-            return acc;
-          }, {});
+        // stats stuff
+        const statistics = Object.values(statisticsMap);
+        return { statistics };
+      } else if (type === 1) {
+        
+        // revenue stuff
+        const totalRevenue = data.reduce((acc, appointment) => {
+          return acc + (Number(appointment.services?.price) || 0);
+        }, 0);
 
-          return {
-            statistics: Object.values(statistics)
-          };
-        }
-        // Revenue Analysis
-        case 1: {
-          revenueByPeriod = data.reduce((acc, appointment) => {
-            
-            // Ensure we have a valid date string
-            if (!appointment.date) {
-              console.warn('Missing date for appointment:', appointment);
-              return acc;
-            }
-
-            // Format the period more safely
-            let period;
-            try {
-              const date = new Date(appointment.date);
-              period = groupBy === 'month' 
-                ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-                : `${date.getFullYear()}`;
-            } catch (err) {
-              console.error('Error parsing date:', appointment.date, err);
-              return acc;
-            }
-
-            // Initialize period if it doesn't exist
-            if (!acc[period]) {
-              acc[period] = {
-                period,
-                revenue: 0,
-                appointments: 0,
-                averageRevenue: 0
-              };
-            }
-
-            // Only count completed appointments
-            if (appointment.status === 'completed' && appointment.services?.price) {
-              acc[period].revenue += Number(appointment.services.price);
-              acc[period].appointments++;
-              acc[period].averageRevenue = acc[period].revenue / acc[period].appointments;
-            }
-
-            return acc;
-          }, {});
-
-          const sortedRevenue = Object.values(revenueByPeriod)
-            .sort((a, b) => b.period.localeCompare(a.period));
-
-          return {
-            revenue: sortedRevenue
-          };
-        }
-
-        default:
-          throw new Error('Invalid report type');
+        return { revenue: [totalRevenue] };
       }
+
+      throw new Error('Invalid report type specified.');
     } catch (error) {
       console.error('Error fetching appointment reports:', error);
       throw error;
@@ -231,22 +194,21 @@ export const reportService = {
           date,
           time,
           status,
-          services (
+          services:services!appointments_service_id_fkey (
             id,
             name,
             price
           ),
-          practitioner:profiles!practitioner_id (
+          practitioner:profiles!appointments_practitioner_id_fkey (
             first_name,
             last_name
           ),
-          client:profiles!client_id (
+          client:profiles!appointments_client_id_fkey (
             first_name,
             last_name
           )
         `);
 
-      // Convert dates to ISO string format if they exist
       if (startDate) {
         const formattedStartDate = new Date(startDate).toISOString().split('T')[0];
         query = query.gte('date', formattedStartDate);
@@ -279,6 +241,7 @@ export const reportService = {
         .eq('role', 'practitioner');
 
       if (error) throw error;
+      console.log('Fetched practitioners:', data);
       return data;
     } catch (error) {
       console.error('Error fetching practitioners:', error);
@@ -294,6 +257,7 @@ export const reportService = {
         .eq('active', true);
 
       if (error) throw error;
+      console.log('Fetched services:', data);
       return data;
     } catch (error) {
       console.error('Error fetching services:', error);

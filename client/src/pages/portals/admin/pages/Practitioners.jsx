@@ -1,5 +1,3 @@
-// src/pages/portals/admin/pages/Practitioners.jsx
-
 import { useState, useEffect } from 'react';
 import { Box, CircularProgress, Alert, Tabs, Tab } from '@mui/material';
 import PortalLayout from '@/components/Layout/PortalLayout';
@@ -26,7 +24,7 @@ const Practitioners = () => {
   const [refreshAvailabilityTrigger, setRefreshAvailabilityTrigger] = useState(0);
   const [selectedPractitioner, setSelectedPractitioner] = useState('');
 
-  // destructure all necessary variables and functions from useUserManagement hook
+  // actually destructure all necessary variables and functions from useUserManagement hook. error logs popping if I don't do this
   const {
     users: practitioners,
     filteredUsers: filteredPractitioners,
@@ -76,12 +74,10 @@ const Practitioners = () => {
     setActiveTab(newValue);
   };
 
-  // refresh availability
   const refreshAvailability = () => {
     setRefreshAvailabilityTrigger(prev => prev + 1);
   };
 
-  // fetch appointment counts for a practitioner
   const fetchAppointmentCountsForPractitioner = async (practitionerId) => {
     try {
       await fetchAppointmentCounts(practitionerId);

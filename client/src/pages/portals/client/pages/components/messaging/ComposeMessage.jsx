@@ -69,8 +69,6 @@ const ComposeMessage = ({ onMessageSent }) => {
     );
   }
 
-
-  // compose message form
   return (
     <Paper elevation={3} sx={{ maxWidth: 600, mx: "auto", p: 3 }}>
       <Typography variant="h4" gutterBottom>Compose Message</Typography>

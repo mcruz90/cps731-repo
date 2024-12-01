@@ -16,13 +16,16 @@ import {
   TableRow,
   Paper,
   CircularProgress,
-  Alert
+  Alert,
+  Snackbar
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { reportService } from '@/services/api/reports';
 import PortalLayout from '@/components/Layout/PortalLayout';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const Reports = () => {
   const [filters, setFilters] = useState({
@@ -37,19 +40,23 @@ const Reports = () => {
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [openSnackbar, setOpenSnackbar] = useState(false);
 
   useEffect(() => {
     
-    // Fetch practitioners and services for filter dropdowns
     const fetchFilterOptions = async () => {
       try {
+        console.log('Fetching practitioners and services for filters');
         const [practitionersData, servicesData] = await Promise.all([
           reportService.getPractitioners(),
           reportService.getServices()
         ]);
+        console.log('Fetched practitioners:', practitionersData);
+        console.log('Fetched services:', servicesData);
         setPractitioners(practitionersData);
         setServices(servicesData);
-      } catch {
+      } catch (err) {
+        console.error('Error fetching filter options:', err);
         setError('Failed to load filter options');
       }
     };
@@ -72,19 +79,96 @@ const Reports = () => {
 
   const handleApplyFilters = async () => {
     try {
+      console.log('Applying filters:', filters);
       setLoading(true);
       const data = await reportService.getFilteredReports(filters);
+      console.log('Filtered reports data:', data);
       setReportData(data);
       setError(null);
     } catch (err) {
+      console.error('Error applying filters:', err);
       setError(err.message);
+      setReportData(null);
     } finally {
       setLoading(false);
     }
   };
 
   const handleExportData = () => {
-    // Export data to PDF or CSV HERE
+    if (!reportData || reportData.length === 0) {
+      alert('No data available to export.');
+      return;
+    }
+
+    const doc = new jsPDF();
+
+    doc.setFontSize(18);
+    doc.text('Detailed Report', 14, 22);
+
+    doc.setFontSize(11);
+    doc.text('Filters:', 14, 30);
+    const filterTexts = [];
+    if (filters.startDate) {
+      filterTexts.push(`Start Date: ${filters.startDate.toLocaleDateString()}`);
+    }
+    if (filters.endDate) {
+      filterTexts.push(`End Date: ${filters.endDate.toLocaleDateString()}`);
+    }
+    if (filters.practitionerId) {
+      const practitioner = practitioners.find(p => p.id === filters.practitionerId);
+      const practitionerName = practitioner ? `${practitioner.first_name} ${practitioner.last_name}` : 'Unknown';
+      filterTexts.push(`Practitioner: ${practitionerName}`);
+    }
+    if (filters.serviceId) {
+      const service = services.find(s => s.id === filters.serviceId);
+      const serviceName = service ? service.name : 'Unknown';
+      filterTexts.push(`Service: ${serviceName}`);
+    }
+    if (filters.status) {
+      filterTexts.push(`Status: ${filters.status.charAt(0).toUpperCase() + filters.status.slice(1)}`);
+    }
+
+    doc.text(filterTexts, 14, 35);
+
+    // Table Headers
+    const tableColumn = ["Date", "Service", "Practitioner", "Client", "Status", "Price"];
+    const tableRows = [];
+
+    // Table Rows
+    reportData.forEach(appointment => {
+      const appointmentDate = new Date(appointment.date).toLocaleDateString();
+      const serviceName = appointment.services?.name || 'N/A';
+      const practitionerName = `${appointment.practitioner?.first_name || ''} ${appointment.practitioner?.last_name || ''}`.trim() || 'N/A';
+      const clientName = `${appointment.client?.first_name || ''} ${appointment.client?.last_name || ''}`.trim() || 'N/A';
+      const status = appointment.status || 'N/A';
+      const price = `$${appointment.services?.price?.toFixed(2) || '0.00'}`;
+
+      const row = [appointmentDate, serviceName, practitionerName, clientName, status, price];
+      tableRows.push(row);
+    });
+
+    // Add AutoTable
+    doc.autoTable({
+      startY: 40,
+      head: [tableColumn],
+      body: tableRows,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [22, 160, 133] },
+      alternateRowStyles: { fillColor: [238, 238, 238] },
+      margin: { horizontal: 14 },
+      theme: 'striped'
+    });
+
+    // Footer
+    const pageHeight = doc.internal.pageSize.height || doc.internal.pageSize.getHeight();
+    doc.setFontSize(10);
+    const date = new Date();
+    const dateStr = date.toLocaleDateString();
+    doc.text(`Report generated on ${dateStr}`, 14, pageHeight - 10);
+
+    // Save PDF
+    doc.save('detailed_report.pdf');
+    setOpenSnackbar(true);
   };
 
   return (
@@ -207,14 +291,14 @@ const Reports = () => {
                     <TableCell>
                       {new Date(appointment.date).toLocaleDateString()}
                     </TableCell>
-                    <TableCell>{appointment.services?.name}</TableCell>
+                    <TableCell>{appointment.services?.name || 'N/A'}</TableCell>
                     <TableCell>
-                      {`${appointment.practitioner?.first_name || ''} ${appointment.practitioner?.last_name || ''}`}
+                      {`${appointment.practitioner?.first_name || ''} ${appointment.practitioner?.last_name || ''}`.trim() || 'N/A'}
                     </TableCell>
                     <TableCell>
-                      {`${appointment.client?.first_name || ''} ${appointment.client?.last_name || ''}`}
+                      {`${appointment.client?.first_name || ''} ${appointment.client?.last_name || ''}`.trim() || 'N/A'}
                     </TableCell>
-                    <TableCell>{appointment.status}</TableCell>
+                    <TableCell>{appointment.status || 'N/A'}</TableCell>
                     <TableCell align="right">
                       ${appointment.services?.price?.toFixed(2) || '0.00'}
                     </TableCell>
@@ -223,7 +307,18 @@ const Reports = () => {
               </TableBody>
             </Table>
           </TableContainer>
-        ) : null}
+        ) : (
+          <Typography variant="body1" color="text.secondary">
+            No report data to display.
+          </Typography>
+        )}
+
+        <Snackbar
+          open={openSnackbar}
+          autoHideDuration={3000}
+          onClose={() => setOpenSnackbar(false)}
+          message="Report exported successfully!"
+        />
       </Box>
     </PortalLayout>
   );

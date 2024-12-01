@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-// useFormValidation is a custom hook that provides a form validation and submission function
+// provides form validation and submission function
 export const useFormValidation = (initialValues, validationRules = {}) => {
     const [values, setValues] = useState(initialValues);
     const [errors, setErrors] = useState({});

@@ -1,7 +1,7 @@
 import { supabase } from './index';
 
 export const userService = {
-  // Get profile -- used to get the logged in user's profile
+  // Get profile -- used to get the logged in user's profile when they go to their profile page
   getProfile: async (userId) => {
       const { data, error } = await supabase
         .from('profiles')
@@ -13,7 +13,7 @@ export const userService = {
     return data;
   },
 
-  // Update profile -- used to update the logged inuser's profile
+  // Update profile -- used to update the logged in user's profile
   updateProfile: async (userId, updates) => {
     const { data, error } = await supabase
         .from('profiles')

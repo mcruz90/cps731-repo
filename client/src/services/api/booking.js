@@ -19,7 +19,6 @@ export const BookingService = {
 
       const formattedDate = format(selectedDate, 'yyyy-MM-dd');
 
-      // Fetch availability slots for the given service and date
       const { data: availabilityData, error: availabilityError } = await supabase
         .from('availability')
         .select(`
@@ -45,7 +44,6 @@ export const BookingService = {
 
       console.log('Raw availability data:', availabilityData);
 
-      // Process the availability data
       const availableTimes = availabilityData.map((slot) => ({
         slotId: slot.id,
         startTime: slot.start_time,
@@ -115,12 +113,11 @@ export const BookingService = {
 
       console.log('Raw availability data:', availabilityData);
 
-      // Process the availability data
       const availableDates = [];
       const availabilityByDate = {};
 
       availabilityData.forEach((slot) => {
-        const date = slot.date; // 'YYYY-MM-DD' format
+        const date = slot.date;
         if (!availableDates.includes(date)) {
           availableDates.push(date);
         }
@@ -254,7 +251,6 @@ export const BookingService = {
     try {
       console.log('Creating appointment first:', appointmentDetails);
 
-      // Create appointment first with 'pending' status until payment completes
       const { data: appointment, error } = await supabase
         .from('appointments')
         .insert([{

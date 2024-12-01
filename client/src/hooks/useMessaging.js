@@ -16,7 +16,6 @@ export const useMessaging = (userId) => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
-  // Define fetchMessages using useCallback so it can be used in useEffect and other functions
   const fetchMessages = useCallback(async () => {
     if (!userId) return;
 
@@ -86,7 +85,7 @@ export const useMessaging = (userId) => {
 
       if (response.success) {
         setSuccess('Message sent successfully!');
-        // Refresh messages
+        
         await fetchMessages();
       } else {
         throw new Error(response.error);

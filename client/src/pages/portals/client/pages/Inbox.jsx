@@ -129,7 +129,7 @@ const Inbox = () => {
           <Tab label="Compose" />
         </Tabs>
 
-        {/* Render based on selected tab */}
+        {/* Render based on selected tab above */}
         {tabIndex === 0 && renderMessages(receivedMessages)}
         {tabIndex === 1 && renderSentMessages(sentMessages)}
         {tabIndex === 2 && <ComposeMessage onMessageSent={() => setTabIndex(0)} />}

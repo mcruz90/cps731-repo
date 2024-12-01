@@ -147,7 +147,7 @@ export const useUserManagement = (role = null) => {
       setActionDialogOpen(false);
       setSelectedAction(null);
       setActionUser(null);
-      fetchUsers(); // Refresh users list
+      fetchUsers();
     } catch (err) {
       console.error('Error performing action on user:', err);
       enqueueSnackbar('Failed to perform action.', { variant: 'error' });
@@ -169,7 +169,7 @@ export const useUserManagement = (role = null) => {
   // save edited availability slot
   const handleSaveAvailabilityEdit = async (editedData) => {
     try {
-      console.log('Saving edited availability:', editedData); // Log the data
+      console.log('Saving edited availability:', editedData);
       
       await adminService.updateAvailability(editedData);
       enqueueSnackbar('Availability updated successfully.', { variant: 'success' });

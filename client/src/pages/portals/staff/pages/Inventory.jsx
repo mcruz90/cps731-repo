@@ -52,7 +52,7 @@ const Inventory = () => {
       setInventory(data);
     } catch (error) {
       console.error("Error retrieving inventory:", error);
-      // Show error snackbar if fetching inventory fails
+      
       showSnackbar('Failed to retrieve inventory.', 'error');
     } finally {
       setLoading(false);
@@ -72,7 +72,6 @@ const Inventory = () => {
     }
   };
 
-  // Define handleSave and handleCancel
   const handleSave = async (updatedItem) => {
     try {
       const savedItem = await inventoryService.updateInventoryItem(updatedItem);

@@ -8,8 +8,8 @@ import {
   CircularProgress,
   Alert,
   Box,
-  Grid
 } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import CancelIcon from '@mui/icons-material/Cancel';
@@ -38,7 +38,7 @@ const getCachedData = () => {
   return null;
 };
 
-// Memoize the DashboardCard component to prevent unnecessary re-renders
+// Memoize the DashboardCard component to prevent unnecessary re-renders -- need to do this for performance -- console logs keep saying this is rerendering
 const DashboardCard = React.memo(function DashboardCard({ title, value, icon, color = 'primary', isLoading, error }) {
   return (
     <Card>
@@ -69,7 +69,6 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
   const [isVisible, setIsVisible] = useState(!document.hidden);
 
-  // Memoize the currency formatter
   const formatCurrency = useCallback((amount) => {
     return new Intl.NumberFormat('en-CA', {
       style: 'currency',
@@ -77,7 +76,6 @@ const Dashboard = () => {
     }).format(amount);
   }, []);
 
-  // Handle visibility change
   useEffect(() => {
     const handleVisibilityChange = () => {
       setIsVisible(!document.hidden);
@@ -89,7 +87,7 @@ const Dashboard = () => {
     };
   }, []);
 
-  // Fetch data
+  // attempt to cache stuff here. consider doing it for other pages too.
   useEffect(() => {
     let isMounted = true;
 
@@ -108,7 +106,7 @@ const Dashboard = () => {
         
         if (isMounted) {
           setDashboardData(data);
-          // Cache the new data
+          
           localStorage.setItem(CACHE_KEY, JSON.stringify({
             data,
             timestamp: Date.now()

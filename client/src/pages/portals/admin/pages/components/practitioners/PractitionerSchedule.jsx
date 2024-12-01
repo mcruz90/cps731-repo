@@ -74,7 +74,7 @@ const PractitionerSchedule = ({
        serviceMap[service.id] = service.name;
      });
    } else {
-    console.error('services is not defined or not an array', services);
+    console.error('services is not defined', services);
   }
 
   return (
@@ -130,7 +130,7 @@ const PractitionerSchedule = ({
                 const practitioner = practitioners.find(p => p.id === slot.practitioner_id);
                 const serviceName = slot.service_id ? (serviceMap[slot.service_id] || 'Service Not Found') : 'No Service Assigned';
 
-                // Get appointment count for this slot
+                
                 const hasAppointments = appointmentCounts[slot.id] > 0;
 
                 return (

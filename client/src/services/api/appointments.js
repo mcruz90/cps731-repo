@@ -1,7 +1,7 @@
-import axios from 'axios';
 import { supabase } from './index';
 import { SchedulerSystem } from './scheduler';
 import { formatDate } from '@/utils/dateUtils';
+import { format } from 'date-fns';
 
 // defines all services related to appointments
 // also uses SchedulerSystem's methods for appointment scheduling--maybe redundant???? need to rethink this flow
@@ -13,40 +13,8 @@ import { formatDate } from '@/utils/dateUtils';
 // createAppointment, - creates a new appointment
 // getAvailableSlotsForModification, - fetches the available slots for modifying an appointment
 // getAppointmentsByDateRange, - fetches the appointments by date range
+// fetchPractitionerAppointments, fetchPractitionerClients
 
-const API_URL = 'http://localhost:5000/api';
-
-export const fetchPractitionerAppointments = async (practitionerId) => {
-  try {
-    const { data, error } = await supabase
-      .from('appointments')
-      .select(`
-        id,
-        client_id,
-        practitioner_id,
-        date,
-        time,
-        duration,
-        status,
-        notes,
-        created_at,
-        updated_at,
-        service_id,
-        availability_id,
-        profiles:client_id (
-          first_name,
-          last_name
-        )
-      `)
-      .eq('practitioner_id', practitionerId);
-
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error fetching practitioner appointments:', error);
-    throw error;
-  }
-};
 
 export const appointmentService = {
 
@@ -135,25 +103,42 @@ export const appointmentService = {
         throw new Error('Appointment ID is required');
       }
 
-      // sets the status to 'pending' upon modification
-      // TODO: maybe practitioners should be able to modify the status of an appointment to confirm the modification? too extra???
+      console.log('Modifying appointment:', { appointmentId, updates });
+
       const updatedFields = {
-        ...updates,
+        date: updates.date,
+        time: updates.time,
+        notes: updates.notes,
         status: 'pending',
+        updated_at: new Date().toISOString(),
       };
+
+      console.log('Sending update to database:', updatedFields);
 
       const { data, error } = await supabase
         .from('appointments')
         .update(updatedFields)
         .eq('id', appointmentId)
+        .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
 
-      return data;
+      console.log('Appointment updated successfully:', data);
+
+      return {
+        success: true,
+        data,
+      };
     } catch (error) {
       console.error('Error modifying appointment:', error);
-      throw error;
+      return {
+        success: false,
+        error: error.message,
+      };
     }
   },
 
@@ -201,7 +186,7 @@ export const appointmentService = {
   },
 
   // creates an appointment
-  // TODO: need to check for existing appointments on the same date and time and any other conflicts
+  // TODO: need to check for existing appointments on the same date and time and any other conflicts. see use case.
   createAppointment: async (appointmentData) => {
     try {
       const { data, error } = await supabase
@@ -224,13 +209,26 @@ export const appointmentService = {
 
   // fetches the available slots for modifying an appointment
   // calls on SchedulerSystem's getAvailableSlots method
-  getAvailableSlotsForModification: async (practitionerId, serviceId, date) => {
+  getAvailableSlotsForModification: async ({
+    practitionerId,
+    serviceId,
+    date,
+    excludeAppointmentId
+  }) => {
+    // Validate required parameters or else this won't go through
+    if (!practitionerId || !serviceId || !date) {
+      throw new Error('Practitioner ID, Service ID, and Date are required');
+    }
+
     try {
-      const slots = await SchedulerSystem.getAvailableSlots(practitionerId, serviceId, date);
+      // set format to (YYYY-MM-DD). date was not displaying properly in the frontend and setting dates two days behind.
+      const formattedDate = typeof date === 'string' ? date : format(date, 'yyyy-MM-dd');
+
+      const slots = await SchedulerSystem.getAvailableSlots(practitionerId, serviceId, formattedDate, excludeAppointmentId);
       return slots;
     } catch (error) {
       console.error('Error in getAvailableSlotsForModification:', error);
-      throw error;
+      throw new Error(`Failed to get available slots: ${error.message}`);
     }
   },
 
@@ -255,7 +253,6 @@ export const appointmentService = {
 
       if (error) throw error;
 
-      // Transform data to match AppointmentList's expected prop structure
       const transformedData = data.map((appointment) => ({
         id: appointment.id,
         sessionType: appointment.service_type.name,
@@ -270,5 +267,49 @@ export const appointmentService = {
       console.error('Error fetching appointments by date range:', error);
       throw error;
     }
-  }
+  },
+
+  async fetchClientAppointments(practitionerId, clientId) {
+    try {
+      const { data, error } = await supabase
+        .from('appointments')
+        .select(`
+          id,
+          date,
+          time,
+          duration,
+          status,
+          notes,
+          services:service_id (
+            name
+          ),
+          profiles:practitioner_id (
+            first_name,
+            last_name
+          )
+        `)
+        .eq('practitioner_id', practitionerId)
+        .eq('client_id', clientId)
+        .order('date', { ascending: false });
+
+      if (error) throw error;
+
+      const appointments = data.map((appt) => ({
+        id: appt.id,
+        date: appt.date,
+        time: appt.time,
+        duration: appt.duration,
+        status: appt.status,
+        notes: appt.notes,
+        serviceName: appt.services.name,
+        practitionerName: `${appt.profiles.first_name} ${appt.profiles.last_name}`,
+      }));
+
+      return appointments;
+    } catch (error) {
+      console.error('Error fetching client appointments:', error);
+      throw new Error(`Failed to fetch client appointments: ${error.message}`);
+    }
+  },
+
 };

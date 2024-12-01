@@ -91,7 +91,7 @@ export const MessagingService = {
     // sends a message to a practitioner
     async sendMessage({ sender_id, receiver_id, content, appointment_id = null }) {
       try {
-        // Ensure all fields are valid UUIDs or null
+        // Ensure all fields are valid UUIDs or null! ids are UUIDs in supabase!
         if (!sender_id || !receiver_id || !content) {
           throw new Error("Missing required fields: sender_id, receiver_id, or content.");
         }
@@ -153,9 +153,8 @@ export const MessagingService = {
               .eq('id', messageId)
               .single();
   
-          if (messageError) throw messageError;
+            if (messageError) throw messageError;
   
-          // Fetch appointment details if appointment_id exists
           let appointmentDetails = null;
           if (messageData.appointment_id) {
               const { data: appointmentData, error: appointmentError } = await supabase
@@ -238,6 +237,7 @@ export const MessagingService = {
     },
 
     // fetches messages sent by the user
+    // TODO: properly change the unread/read status. this isn't working right now.
     async fetchSentMessages(userId) {
       try {
         const { data, error } = await supabase

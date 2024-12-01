@@ -93,14 +93,13 @@ const useProducts = () => {
     setPage(0);
   };
 
-  // centralize adminService operations
   const updateProduct = async (id, updateData) => {
     try {
       await adminService.updateProduct(id, updateData);
       await fetchProducts();
     } catch (err) {
       setError(err.message);
-      throw err; // Optional: Re-throw to allow upstream handling
+      throw err; 
     }
   };
 

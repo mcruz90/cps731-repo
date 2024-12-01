@@ -14,107 +14,109 @@ export const orderService = {
   // createOrder is called once all details from order process workflow in UI has been collected
   async createOrder({ items, shipping, payment }) {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('No authenticated user');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
 
-        console.log('Shipping data received:', shipping);
+      console.log('Shipping data received:', shipping);
 
-        // Calculate total amount
-        const totalAmount = items.reduce((sum, item) => 
-            sum + item.quantity * item.products.price, 
-            0
-        ).toFixed(2);
+      // Calculate total amount
+      const totalAmount = items.reduce((sum, item) => 
+        sum + item.quantity * item.products.price, 
+        0
+      ).toFixed(2);
 
-        // Step 1: Start database transaction
-        const { data: order, error: orderError } = await supabase
-            .from('orders')
-            .insert([{
-                user_id: user.id,
-                status: 'processing', // Ensure it's a valid status
-                total_amount: totalAmount,
-                shipping_address: shipping,
-                payment_details: {}, // Placeholder for payment details
-            }])
-            .select()
-            .single();
+      // Step 1: Process payment and create payment record
+      const paymentResult = await PaymentGateway.processProductPayment({
+        chargeId: payment.chargeId,
+        amount: totalAmount,
+        currency: 'CAD',
+        billingDetails: payment.billingDetails,
+      }, null); // Pass null for orderId since we don't have it yet
 
-        if (orderError) throw orderError;
+      if (!paymentResult.success) {
+        throw new Error(`Payment failed: ${paymentResult.error}`);
+      }
 
-        console.log('Order created with ID:', order.id);
+      console.log('Payment processed successfully.');
 
-        // Step 2: Process payment
-        const paymentResponse = await PaymentGateway.processProductPayment({
-            paymentMethodId: payment.paymentMethodId,
-            amount: totalAmount,
-            currency: 'cad',
-        }, order.id);
+      // Step 2: Create the order in the database
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert([{
+          user_id: user.id,
+          status: 'processing', // Ensure it's a valid status
+          total_amount: totalAmount,
+          shipping_address: shipping,
+          payment_details: {
+            card_holder: payment.billingDetails.name,
+            billing_details: payment.billingDetails,
+            transaction_id: paymentResult.payment.transaction_id,
+          },
+        }])
+        .select()
+        .single();
 
-        if (!paymentResponse.success) {
-            throw new Error(`Payment failed: ${paymentResponse.error}`);
+      if (orderError) throw orderError;
+
+      console.log('Order created with ID:', order.id);
+
+      // Step 3: Update the payment record with the order ID
+      const { error: updatePaymentError } = await supabase
+        .from('payments')
+        .update({ order_id: order.id })
+        .eq('id', paymentResult.payment.id);
+
+      if (updatePaymentError) throw updatePaymentError;
+
+      console.log('Payment record updated with order ID.');
+
+      // Step 4: Insert order items
+      const orderItems = items.map(item => ({
+        order_id: order.id,
+        product_id: item.products.id,
+        quantity: item.quantity,
+        price: Number(item.products.price).toFixed(2),
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+
+      if (itemsError) throw itemsError;
+
+      console.log('Order items added.');
+
+      // Step 5: Update product inventory
+      for (const item of items) {
+        const newQuantity = item.products.quantity - item.quantity;
+        if (newQuantity < 0) {
+          throw new Error(`Insufficient inventory for product ID ${item.products.id}`);
         }
 
-        console.log('Payment processed successfully.');
+        const { error: updateError } = await supabase
+          .from('products')
+          .update({ quantity: newQuantity })
+          .eq('id', item.products.id);
 
-        // Step 3: Update order with payment details
-        const { error: updateOrderError } = await supabase
-            .from('orders')
-            .update({
-                payment_details: {
-                    card_holder: payment.cardName,
-                    billing_details: payment.billingDetails,
-                    transaction_id: paymentResponse.payment.transaction_id,
-                },
-            })
-            .eq('id', order.id);
+        if (updateError) throw updateError;
+      }
 
-        if (updateOrderError) throw updateOrderError;
+      console.log('Inventory updated.');
 
-        console.log('Order updated with payment details.');
+      // Step 6: Clear the cart
+      const { error: cartError } = await supabase
+        .from('cart_items')
+        .delete()
+        .eq('user_id', user.id);
 
-        // Step 4: Insert order items
-        const orderItems = items.map(item => ({
-            order_id: order.id,
-            product_id: item.products.id,
-            quantity: item.quantity,
-            price: Number(item.products.price).toFixed(2),
-        }));
+      if (cartError) throw cartError;
 
-        const { error: itemsError } = await supabase
-            .from('order_items')
-            .insert(orderItems);
+      console.log('Cart cleared successfully.');
 
-        if (itemsError) throw itemsError;
-
-        console.log('Order items added.');
-
-        // Step 5: Update product inventory
-        for (const item of items) {
-            const { error: updateError } = await supabase
-                .from('products')
-                .update({
-                    quantity: item.products.quantity - item.quantity,
-                })
-                .eq('id', item.products.id);
-
-            if (updateError) throw updateError;
-        }
-
-        console.log('Inventory updated.');
-
-        // Step 6: Clear the cart
-        const { error: cartError } = await supabase
-            .from('cart_items')
-            .delete()
-            .eq('user_id', user.id);
-
-        if (cartError) throw cartError;
-
-        console.log('Cart cleared successfully.');
-
-        return order;
+      return order;
     } catch (error) {
-        console.error('Order creation failed:', error);
-        throw new Error('Failed to create order. Please try again.');
+      console.error('Order creation failed:', error);
+      throw new Error('Failed to create order. Please try again.');
     }
   },
 

@@ -9,7 +9,6 @@ const UserFilters = ({ users, filters, setFilters, setFilteredUsers, isPractitio
   
     let filteredResults = [...users];
 
-    // apply filters
     if (newFilters.role && !isPractitionerView) {
       filteredResults = filteredResults.filter(user => user.role === newFilters.role);
     }
