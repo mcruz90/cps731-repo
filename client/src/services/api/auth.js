@@ -37,20 +37,40 @@ export const authService = {
     async getCurrentSession() {
       const cachedSession = getCachedSession();
       if (cachedSession) {
-        return cachedSession;
-      }
+        
+        // Check if the token is expired
+        const { exp } = JSON.parse(atob(cachedSession.access_token.split('.')[1]));
+        const currentTime = Math.floor(Date.now() / 1000);
+        if (exp > currentTime) {
+          return cachedSession;
+        } else {
 
+          // Token expired, refresh the session
+          const { data: { session }, error } = await supabase.auth.refreshSession();
+          if (error) throw error;
+          
+          // Cache the new session
+          if (session) {
+            localStorage.setItem(CACHE_KEY, JSON.stringify({
+              session,
+              timestamp: Date.now(),
+            }));
+          }
+          return session;
+        }
+      }
+    
       const { data: { session }, error } = await supabase.auth.getSession();
       if (error) throw error;
-
+    
       // Cache the session
       if (session) {
         localStorage.setItem(CACHE_KEY, JSON.stringify({
           session,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         }));
       }
-
+    
       return session;
     },
   
@@ -138,7 +158,6 @@ export const authService = {
             console.log('Auth signup successful:', authData?.user?.id);
 
             if (authData?.user) {
-                // Create the user profile with only the fields that exist in the profiles table
                 const newProfileData = {
                     id: authData.user.id,
                     first_name,

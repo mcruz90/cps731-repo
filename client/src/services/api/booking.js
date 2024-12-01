@@ -1,5 +1,5 @@
 import { supabase } from './index';
-import { format, getDay } from 'date-fns';
+import { format } from 'date-fns';
 
 // defines all services related to booking
 // Available methods:
@@ -16,38 +16,25 @@ export const BookingService = {
   async getServiceAvailability(serviceId, selectedDate) {
     try {
       console.log('Fetching availability for:', { serviceId, selectedDate });
-      
-      const dayOfWeek = getDay(selectedDate);
-      
-      // First get practitioners for this service
-      // Join practitioner_services with profiles to get practitioner names
-      // TODO: add specializations to the query and figure out how to display them in the UI???
-      const { data: practitioners, error: practitionerError } = await supabase
-        .from('practitioner_services')
+
+      const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+
+      const { data: availabilityData, error: availabilityError } = await supabase
+        .from('availability')
         .select(`
+          id,
           practitioner_id,
-          profiles!practitioner_id (
+          start_time,
+          end_time,
+          is_available,
+          service_id,
+          profiles:practitioner_id (
             first_name,
             last_name
           )
         `)
-        .eq('service_id', serviceId);
-
-      if (practitionerError) {
-        console.error('Error fetching practitioners:', practitionerError);
-        throw practitionerError;
-      }
-
-      console.log('Fetched practitioners:', practitioners);
-
-      // Get availability for these practitioners from 'availability' table
-      const practitionerIds = practitioners.map(p => p.practitioner_id);
-      
-      const { data: availabilityData, error: availabilityError } = await supabase
-        .from('availability')
-        .select('*')
-        .in('practitioner_id', practitionerIds)
-        .eq('day_of_week', dayOfWeek)
+        .eq('service_id', serviceId)
+        .eq('date', formattedDate)
         .eq('is_available', true);
 
       if (availabilityError) {
@@ -57,32 +44,134 @@ export const BookingService = {
 
       console.log('Raw availability data:', availabilityData);
 
-      // Process the availability data with practitioner names
-      const availableTimes = availabilityData.map(slot => {
-        const practitioner = practitioners.find(p => p.practitioner_id === slot.practitioner_id);
-        return {
-          slotId: slot.id,
-          startTime: slot.start_time,
-          endTime: slot.end_time,
-          practitionerId: slot.practitioner_id,
-          practitionerName: practitioner ? 
-            `${practitioner.profiles.first_name} ${practitioner.profiles.last_name}` : 
-            'Unknown Provider'
-        };
-      });
+      const availableTimes = availabilityData.map((slot) => ({
+        slotId: slot.id,
+        startTime: slot.start_time,
+        endTime: slot.end_time,
+        practitionerId: slot.practitioner_id,
+        practitionerName: `${slot.profiles.first_name} ${slot.profiles.last_name}`,
+      }));
 
       console.log('Processed available times:', availableTimes);
 
       return {
         success: true,
-        availableTimes
+        availableTimes,
       };
-
     } catch (error) {
       console.error('Error in getServiceAvailability:', error);
       return {
         success: false,
-        error: error.message
+        error: error.message,
+      };
+    }
+  },
+
+  // Fetches the availability for a service within a date range
+  async getServiceAvailabilityForDateRange(serviceId, startDate, endDate) {
+    try {
+      console.log(
+        'Fetching availability for service:',
+        serviceId,
+        'from',
+        startDate,
+        'to',
+        endDate
+      );
+
+      const formattedStartDate = format(startDate, 'yyyy-MM-dd');
+      const formattedEndDate = format(endDate, 'yyyy-MM-dd');
+
+      
+      // Fetch availability slots for the given service and date range
+      const { data: availabilityData, error: availabilityError } = await supabase
+        .from('availability')
+        .select(
+          `
+          id,
+          practitioner_id,
+          date,
+          start_time,
+          end_time,
+          is_available,
+          service_id,
+          profiles:practitioner_id (
+            first_name,
+            last_name
+          )
+        `
+        )
+        .eq('service_id', serviceId)
+        .gte('date', formattedStartDate)
+        .lte('date', formattedEndDate)
+        .eq('is_available', true);
+
+      if (availabilityError) {
+        console.error('Error fetching availability:', availabilityError);
+        throw availabilityError;
+      }
+
+      console.log('Raw availability data:', availabilityData);
+
+      const availableDates = [];
+      const availabilityByDate = {};
+
+      availabilityData.forEach((slot) => {
+        const date = slot.date;
+        if (!availableDates.includes(date)) {
+          availableDates.push(date);
+        }
+        if (!availabilityByDate[date]) {
+          availabilityByDate[date] = [];
+        }
+        availabilityByDate[date].push({
+          slotId: slot.id,
+          startTime: slot.start_time,
+          endTime: slot.end_time,
+          practitionerId: slot.practitioner_id,
+          practitionerName: `${slot.profiles.first_name} ${slot.profiles.last_name}`,
+        });
+      });
+
+      return {
+        success: true,
+        availableDates,
+        availabilityByDate,
+      };
+    } catch (error) {
+      console.error('Error in getServiceAvailabilityForDateRange:', error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  },
+
+  async getClientPractitionerAppointments(clientId, practitionerId) {
+    try {
+      const { data, error } = await supabase
+        .from('appointments')
+        .select(`
+          id,
+          date,
+          time,
+          status
+        `)
+        .eq('client_id', clientId)
+        .eq('practitioner_id', practitionerId)
+        .order('date', { ascending: false });
+  
+      if (error) throw error;
+  
+      return {
+        success: true,
+        appointments: data,
+      };
+    } catch (error) {
+      console.error('Error fetching appointments:', error);
+      return {
+        success: false,
+        error: error.message,
       };
     }
   },
@@ -162,7 +251,6 @@ export const BookingService = {
     try {
       console.log('Creating appointment first:', appointmentDetails);
 
-      // Create appointment first with 'pending' status until payment completes
       const { data: appointment, error } = await supabase
         .from('appointments')
         .insert([{

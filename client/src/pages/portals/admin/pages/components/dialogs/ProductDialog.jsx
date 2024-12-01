@@ -57,7 +57,7 @@ function ProductDialog({ open, onClose, onSave, product, mode }) {
         [name]: value
       };
 
-      // Automatically calculate profit margin when price or supply cost changes
+      // supabase automatically calculates profit margin when price or supply cost changes
       if (name === 'price' || name === 'supply_cost') {
         const price = parseFloat(name === 'price' ? value : prev.price) || 0;
         const supplyCost = parseFloat(name === 'supply_cost' ? value : prev.supply_cost) || 0;
@@ -71,6 +71,7 @@ function ProductDialog({ open, onClose, onSave, product, mode }) {
     });
   };
 
+  // validation stuff
   const validateForm = () => {
     const errors = {};
     
@@ -79,7 +80,7 @@ function ProductDialog({ open, onClose, onSave, product, mode }) {
     if (!editData.price) errors.price = 'Price is required';
     if (!editData.quantity) errors.quantity = 'Quantity is required';
 
-    // Numeric validation
+    // number validation
     if (isNaN(Number(editData.price)) || Number(editData.price) < 0) {
       errors.price = 'Price must be a positive number';
     }

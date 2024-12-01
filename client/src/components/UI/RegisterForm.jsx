@@ -55,7 +55,6 @@ const RegisterForm = () => {
     };
 
     return (
-        // form to handle the registration of a new user
         <form onSubmit={(e) => handleSubmit(e, onSubmit)}>
             {registrationError && (
                 <Alert severity="error" sx={{ mb: 2 }}>

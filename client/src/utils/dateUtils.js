@@ -24,21 +24,22 @@ export const getCurrentWeekDateRange = () => {
  * @returns {string} - Formatted date string.
  */
 export const formatDate = (date) => {
-    let dateObj;
+  if (!date) return '';
+  
+  // Handle both string dates and Date objects
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  
+  // Validate the date
+  if (isNaN(dateObj.getTime())) {
+    console.error('Invalid date:', date);
+    return '';
+  }
 
-    if (date instanceof Date) {
-        dateObj = date;
-    } else if (typeof date === 'string') {
-        dateObj = new Date(date);
-        if (isNaN(dateObj)) {
-            console.error('Invalid date string provided to formatDate:', date);
-            return '';
-        }
-    } else {
-        console.error('Unsupported date type provided to formatDate:', date);
-        return '';
-    }
+  // Use UTC methods to prevent timezone issues
+  const year = dateObj.getUTCFullYear();
+  const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getUTCDate()).padStart(2, '0');
 
-    return dateObj.toISOString().split('T')[0];
+  return `${year}-${month}-${day}`;
 };
 

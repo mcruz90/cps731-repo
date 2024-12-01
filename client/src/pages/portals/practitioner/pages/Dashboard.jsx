@@ -1,14 +1,13 @@
-import { Card, CardContent, Typography } from '@mui/material';
-import {Grid} from '@mui/material';
+import React from 'react';
+import { Typography, Card, CardContent, Grid } from '@mui/material';
 import PortalLayout from '@/components/Layout/PortalLayout';
 
-export default function Dashboard() {
+const Dashboard = () => {
   return (
     <PortalLayout>
       <Typography variant="h4" component="h1" gutterBottom>
         Practitioner Dashboard
       </Typography>
-      
       <Grid container spacing={3}>
         <Grid item xs={12} md={6}>
           <Card>
@@ -22,7 +21,6 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </Grid>
-        
         <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
@@ -39,3 +37,5 @@ export default function Dashboard() {
     </PortalLayout>
   );
 };
+
+export default Dashboard;

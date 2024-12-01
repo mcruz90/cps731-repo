@@ -196,8 +196,8 @@ export default function Home() {
                 xs={12} 
                 md={4} 
                 sx={{
-                  maxWidth: '400px', // Limit individual card width
-                  mx: 'auto' // Center cards
+                  maxWidth: '400px',
+                  mx: 'auto'
                 }}
               >
                 <Card 
@@ -216,7 +216,7 @@ export default function Home() {
                 >
                   <CardMedia
                     component="img"
-                    height="300" // Increased height
+                    height="300"
                     image={service.image}
                     alt={service.title}
                     sx={{

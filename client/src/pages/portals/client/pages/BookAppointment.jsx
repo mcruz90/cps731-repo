@@ -135,23 +135,28 @@ export default function BookAppointment() {
     setActiveTab(1);
   };
 
-  // DateTime and Practitioner Selection Handler
-  const handleDateTimeSelect = (date, time, practitionerId, practitionerName) => {
-    console.log('DateTime and practitioner selected:', { date, time, practitionerId, practitionerName });
-    setFormData(prevData => {
+   // DateTime and Practitioner Selection Handler
+   const handleDateTimeSelect = (date, time, practitionerId, practitionerName) => {
+    console.log('DateTime and practitioner selected:', {
+      date,
+      time,
+      practitionerId,
+      practitionerName,
+    });
+    setFormData((prevData) => {
       const newData = {
         ...prevData,
         date: date,
         time: time,
         practitionerId: practitionerId,
-        practitionerName: practitionerName
+        practitionerName: practitionerName,
       };
-      
+
       // Automatically advance to confirmation if all required data is present
       if (date && time && practitionerId) {
         setActiveTab(2);
       }
-      
+
       return newData;
     });
   };

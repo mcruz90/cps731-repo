@@ -41,7 +41,7 @@ export default function ConfirmDetails({
 
   // PAYMENT/STRIPE INTEGRATION
   const [paymentStep, setPaymentStep] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState('card');
 
   const handlePaymentSubmit = async (paymentData) => {
     try {

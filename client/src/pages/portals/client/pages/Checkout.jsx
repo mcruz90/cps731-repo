@@ -19,7 +19,8 @@ import PaymentForm from './components/checkout/PaymentForm';
 import OrderSummary from './components/checkout/OrderSummary';
 import { cartService } from '@/services/api/cart';
 import { orderService } from '@/services/api/order';
-
+import { PaymentGateway } from '@/services/api/payment';
+import { authService } from '@/services/api/auth';
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 // steps in checkout process
@@ -35,6 +36,9 @@ const Checkout = () => {
   const [paymentMethod, setPaymentMethod] = useState('card');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+
+  const session = authService.getCurrentSession();
+  const accessToken = session?.access_token;
 
   // fetches the cart items from the database
   // useCallback to prevent unnecessary re-renders
@@ -96,61 +100,113 @@ const Checkout = () => {
     try {
       setLoading(true);
       setError(null);
-      
+  
       if (!paymentDetails.paymentMethodId) {
         throw new Error('Payment method ID is missing');
       }
-
+  
       const totalAmount = cartItems.reduce((sum, item) => 
         sum + (item.quantity * item.products.price), 0
       );
-      
+  
+      // Call the Edge Function to process the payment
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/process-product-payment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          paymentMethodId: paymentDetails.paymentMethodId,
+          amount: totalAmount,
+          currency: paymentDetails.currency || 'CAD',
+          email: paymentDetails.email,
+          billingDetails: paymentDetails.billingDetails || {},
+        }),
+      });
+  
+      const data = await response.json();
+  
+      if (!response.ok) {
+        console.error('Payment processing error:', data);
+        setError(data.error || 'Payment failed');
+        return;
+      }
+  
+      // Payment succeeded, store payment data
+      const paymentIntent = data.paymentIntent;
+      const chargeId = paymentIntent.charges?.data[0]?.id;
+  
+      if (!chargeId) {
+        throw new Error('Charge ID not found in Payment Intent');
+      }
+  
       const paymentInfo = {
-        paymentMethodId: paymentDetails.paymentMethodId,
-        cardName: paymentDetails.billingDetails?.name || '',
+        chargeId,
         amount: totalAmount,
         currency: paymentDetails.currency || 'CAD',
-        billingDetails: paymentDetails.billingDetails || {}
+        billingDetails: paymentIntent.charges?.data[0]?.billing_details || {},
       };
-
+  
       setPaymentData(paymentInfo);
       setActiveStep(2);
     } catch (err) {
-      console.error('Payment validation error:', err);
-      setError(err.message || 'Failed to validate payment. Please try again.');
+      console.error('Payment processing error:', err);
+      setError(err.message || 'Failed to process payment. Please try again.');
     } finally {
       setLoading(false);
     }
   };
+  
 
   // PaymentGateway processes payment, then order is created upon client confirmation of order details and successful payment
   const handlePlaceOrder = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
-
+  
     try {
-        // Use collected data from state as it's collected from checkout workflow
-        const shipping = shippingData;
-        const payment = paymentData;
-        const items = cartItems;
-
-
-        // Create the order
-        const order = await orderService.createOrder({ items, shipping, payment });
-
-        console.log('Order placed successfully:', order);
-
-        // Redirect to order confirmation page--need to fix???? this isn't working
-        navigate('/client/order-confirmation', {
-            state: { orderId: order.id },
-        });
-        console.log('Redirecting to order confirmation page...');
+      // Use collected data from state as it's collected from checkout workflow
+      const shipping = shippingData;
+      const payment = paymentData;
+      const items = cartItems;
+  
+      // Process the payment record in the database
+      const paymentResult = await PaymentGateway.processProductPayment(
+        {
+          chargeId: payment.chargeId,
+          amount: payment.amount,
+          currency: payment.currency,
+          billingDetails: payment.billingDetails,
+        },
+        null 
+      );
+  
+      if (!paymentResult.success) {
+        setError(paymentResult.error || 'Failed to process payment. Please try again.');
+        return;
+      }
+  
+      // Create the order, now that payment is processed
+      const order = await orderService.createOrder({
+        items,
+        shipping,
+        paymentId: paymentResult.payment.id, // Associate payment with order
+      });
+  
+      console.log('Order placed successfully:', order);
+  
+      // Redirect to order confirmation page
+      navigate('/client/order-confirmation', {
+        state: { orderId: order.id },
+      });
+      console.log('Redirecting to order confirmation page...');
     } catch (error) {
-        console.error('Order creation error:', error);
+      console.error('Order creation error:', error);
+      setError(error.message || 'Failed to place order. Please try again.');
     } finally {
-        setIsSubmitting(false);
+      setIsSubmitting(false);
     }
-};
+  };
 
   // Render the appropriate step content based on the active step as the user progresses through the checkout process
   const getStepContent = (step) => {
@@ -187,8 +243,7 @@ const Checkout = () => {
               <Elements stripe={stripePromise}>
                 <PaymentForm
                   onSubmit={handlePaymentSubmit}
-                  amount={cartItems.reduce((sum, item) => 
-                    sum + (item.quantity * item.products.price), 0)}
+                  amount={cartItems.reduce((sum, item) => sum + (item.quantity * item.products.price), 0)}
                   loading={loading}
                 />
               </Elements>

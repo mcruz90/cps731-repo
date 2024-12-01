@@ -65,6 +65,7 @@ export const profileService = {
   }
 };
 
+// testing rls---may need to disable policies. admin can't access any reports with RLS on.
 export const debugProfileService = {
   async testConnection() {
     const { data, error } = await supabase.from('profiles').select('count(*)');
@@ -82,7 +83,7 @@ export const debugProfileService = {
       .eq('id', userId)
       .single();
       
-    console.log('RLS test:', { profile, error: profileError });
+    console.log('testing test test test for rls:', { profile, error: profileError });
     return { profile, error: profileError };
   }
 };

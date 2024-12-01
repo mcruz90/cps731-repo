@@ -1,5 +1,7 @@
-import { Typography } from '@mui/material';
+import React from 'react';
+import PractitionerSchedule from './PractitionerSchedule';
 import PortalLayout from '@/components/Layout/PortalLayout';
+import { Typography } from '@mui/material';
 
 const Schedule = () => {
   return (
@@ -7,7 +9,7 @@ const Schedule = () => {
       <Typography variant="h4" component="h1" gutterBottom>
         Schedule
       </Typography>
-      {/* Add schedule component here */}
+      <PractitionerSchedule />
     </PortalLayout>
   );
 };

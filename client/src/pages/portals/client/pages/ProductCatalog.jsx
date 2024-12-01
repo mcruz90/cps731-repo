@@ -56,7 +56,6 @@ const ProductCatalog = () => {
       const data = await inventoryService.retrieveInventory();
       setProducts(data);
       
-      // Set initial max price based on highest product price
       const highestPrice = Math.max(...data.map(product => product.price));
       setMaxPrice(Math.ceil(highestPrice));
       setPriceRange([0, Math.ceil(highestPrice)]);

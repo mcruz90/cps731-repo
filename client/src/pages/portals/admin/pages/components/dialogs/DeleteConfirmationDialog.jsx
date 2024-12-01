@@ -8,6 +8,7 @@ import {
   Typography,
 } from '@mui/material';
 
+// delete confirmation dialog for user management
 function DeleteConfirmationDialog({ open, onClose, onConfirm, productName }) {
   return (
     <Dialog open={open} onClose={onClose}>

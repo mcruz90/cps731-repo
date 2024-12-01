@@ -15,21 +15,21 @@ import PropTypes from 'prop-types';
 // STRIPE INTEGRATION
 import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
-const PaymentForm = ({ onSubmit, initialData }) => {
+const PaymentForm = ({ onSubmit, initialData, amount }) => {
   //STRIPE INTEGRATION
   const stripe = useStripe();
   const elements = useElements();
 
+
   // Form data with billing details
   const [formData, setFormData] = useState(initialData || {
-    cardName: '',
+    clientName: '',
     email: '',
     address: '',
     city: '',
     state: '',
     postalCode: '',
     country: 'CA',
-    currency: 'CAD'
   });
 
   const [errors, setErrors] = useState({});
@@ -42,8 +42,8 @@ const PaymentForm = ({ onSubmit, initialData }) => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.cardName.trim()) {
-      newErrors.cardName = 'Name is required';
+    if (!formData.clientName.trim()) {
+      newErrors.clientName = 'Name is required';
     }
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
@@ -84,15 +84,15 @@ const PaymentForm = ({ onSubmit, initialData }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+  
     if (!validateForm()) return;
-
+  
     try {
-      const { error, paymentMethod } = await stripe.createPaymentMethod({
+      const { error: paymentMethodError, paymentMethod } = await stripe.createPaymentMethod({
         type: 'card',
         card: elements.getElement(CardElement),
         billing_details: {
-          name: formData.cardName,
+          name: formData.clientName,
           email: formData.email,
           address: {
             line1: formData.address,
@@ -103,17 +103,84 @@ const PaymentForm = ({ onSubmit, initialData }) => {
           },
         },
       });
-
-      if (error) {
-        setErrors(prev => ({ ...prev, stripe: error.message }));
+  
+      if (paymentMethodError) {
+        setErrors((prev) => ({ ...prev, stripe: paymentMethodError.message }));
         return;
       }
+  
+      console.log('Payment Method ID:', paymentMethod.id);
+      console.log('Amount:', amount);
+  
+      // Call the backend to process the payment
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/process-payment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          paymentMethodId: paymentMethod.id,
+          amount: amount,
+          billingDetails: {
+            name: formData.clientName,
+            email: formData.email,
+            address: {
+              line1: formData.address,
+              city: formData.city,
+              state: formData.state,
+              postal_code: formData.postalCode,
+              country: formData.country,
+            },
+          },
+        }),
+      });
+  
+      const data = await response.json();
+  
+      if (!response.ok) {
+        console.error('Payment processing error:', data);
+        setErrors((prev) => ({ ...prev, stripe: data.error || 'Payment failed' }));
+        return;
+      }
+  
+      let paymentIntent = data.paymentIntent;
+  
+      // Check if payment requires additional action
+      if (paymentIntent.status === 'requires_action') {
+        // Handle additional authentication (e.g., 3D Secure)
+        const { error: confirmError, paymentIntent: confirmedPaymentIntent } = await stripe.confirmCardPayment(
+          paymentIntent.client_secret
+        );
+  
+        if (confirmError) {
+          console.error('Error confirming card payment:', confirmError);
+          setErrors((prev) => ({ ...prev, stripe: confirmError.message }));
+          return;
+        }
+  
+        paymentIntent = confirmedPaymentIntent;
+      }
+  
+      if (paymentIntent.status !== 'succeeded') {
+        throw new Error('Payment not successful');
+      }
+  
+      const chargeId = paymentIntent.latest_charge;
 
+      console.log('payment intent details:', paymentIntent);
+
+      if (!chargeId) {
+        console.log('Payment Intent:', paymentIntent);
+        throw new Error('Charge ID not found in Payment Intent');
+      }
+
+      // Call onSubmit with the Charge ID and billing details
       await onSubmit({
         paymentMethodId: paymentMethod.id,
-        currency: formData.currency,
+        chargeId: chargeId,
+        amount: amount,
         billingDetails: {
-          name: formData.cardName,
+          name: formData.clientName,
           email: formData.email,
           address: {
             line1: formData.address,
@@ -122,14 +189,14 @@ const PaymentForm = ({ onSubmit, initialData }) => {
             postal_code: formData.postalCode,
             country: formData.country,
           },
-        }
+        },
       });
     } catch (err) {
-      console.error('Unexpected error:', err);
-      setErrors(prev => ({ ...prev, stripe: 'An unexpected error occurred' }));
+      console.error('Payment processing error:', err);
+      setErrors((prev) => ({ ...prev, stripe: err.message || 'An unexpected error occurred' }));
     }
-  };
-
+  };  
+  
 
   return (
     <Box component="form" onSubmit={handleSubmit} noValidate>
@@ -140,17 +207,17 @@ const PaymentForm = ({ onSubmit, initialData }) => {
       <Grid container spacing={3}>
         {/* Billing Information */}
         <Grid item xs={12}>
-          <FormControl fullWidth error={!!errors.cardName}>
+          <FormControl fullWidth error={!!errors.clientName}>
             <TextField
               required
-              name="cardName"
+              name="clientName"
               label="Name on Card"
-              value={formData.cardName}
+              value={formData.clientName}
               onChange={handleChange}
-              error={!!errors.cardName}
+              error={!!errors.clientName}
             />
-            {errors.cardName && (
-              <FormHelperText>{errors.cardName}</FormHelperText>
+            {errors.clientName && (
+              <FormHelperText>{errors.clientName}</FormHelperText>
             )}
           </FormControl>
         </Grid>
@@ -299,7 +366,8 @@ const PaymentForm = ({ onSubmit, initialData }) => {
 
 PaymentForm.propTypes = {
   onSubmit: PropTypes.func.isRequired,
-  initialData: PropTypes.object
+  initialData: PropTypes.object,
+  amount: PropTypes.number.isRequired
 };
 
 export default PaymentForm;

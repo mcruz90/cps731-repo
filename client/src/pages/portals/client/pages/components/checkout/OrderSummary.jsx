@@ -43,8 +43,9 @@ const OrderSummary = ({ cartItems = [], shippingData = {}, paymentData = {} }) =
     }, 0);
   };
 
+  // HARDCODE FOR NOW. NEED TO SET UP TAX STUFF.
   const calculateTax = () => {
-    return calculateSubtotal() * 0.13; // 13% tax
+    return calculateSubtotal() * 0.13;
   };
 
   const calculateTotal = () => {

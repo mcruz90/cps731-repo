@@ -7,6 +7,7 @@ import Users from './Users';
 import Products from './Products';
 import Reports from './Reports';
 import TestUserCreator from './components/TestUserCreator';
+import Practitioners from './Practitioners';
 
 const AdminPortal = () => {
   const navLinks = [
@@ -16,6 +17,7 @@ const AdminPortal = () => {
     { to: '/admin/users', label: 'Users' },
     // { to: '/admin/add-users', label: 'Add Users' }, disable for now... send-email edge functions not working properly
     { to: '/admin/test-user-creator', label: 'Add Users' },
+    { to: '/admin/practitioners', label: 'Practitioners' },
   ];
 
   return (
@@ -30,6 +32,7 @@ const AdminPortal = () => {
         <Route path="products" element={<Products />} />
         <Route path="reports" element={<Reports />} />
         <Route path="test-user-creator" element={<TestUserCreator />} />
+        <Route path="practitioners" element={<Practitioners />} />
       </Routes>
     </>
   );

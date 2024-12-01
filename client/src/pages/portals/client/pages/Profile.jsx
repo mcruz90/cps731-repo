@@ -13,6 +13,12 @@ import {
 } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 import PortalLayout from '@/components/Layout/PortalLayout';
+import { 
+  validateEmail, 
+  validateRequired, 
+  validatePhone, 
+  validatePostalCode
+} from '@/utils/validation';
 
 export default function Profile() {
   console.log('Profile component rendering');
@@ -27,6 +33,7 @@ export default function Profile() {
     province: '',
     postalCode: ''
   });
+  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
@@ -99,7 +106,36 @@ export default function Profile() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+    setSuccess(false);
     setLoading(true);
+
+    // Validate form data
+    const newErrors = {};
+
+    newErrors.firstName = validateRequired(formData.firstName, 'First Name');
+    newErrors.lastName = validateRequired(formData.lastName, 'Last Name');
+    newErrors.phone = validatePhone(formData.phone);
+    newErrors.email = validateEmail(formData.email);
+    newErrors.address = validateRequired(formData.address, 'Street Address');
+    newErrors.city = validateRequired(formData.city, 'City');
+    newErrors.province = validateRequired(formData.province, 'Province');
+    newErrors.postalCode = validatePostalCode(formData.postalCode);
+
+
+    // Remove empty error messages
+    Object.keys(newErrors).forEach(key => {
+      if (!newErrors[key]) {
+        delete newErrors[key];
+      }
+    });
+
+    setErrors(newErrors);
+
+    // If there are errors, do not proceed
+    if (Object.keys(newErrors).length > 0) {
+      setLoading(false);
+      return;
+    }
 
     try {
       const updatedProfile = await profileService.updateProfile(user.id, formData);
@@ -116,6 +152,7 @@ export default function Profile() {
         province: updatedProfile.province || '',
         postalCode: updatedProfile.postal_code || ''
       }));
+      setErrors({});
     } catch (err) {
       setError(err.message);
     } finally {
@@ -156,6 +193,8 @@ export default function Profile() {
                 onChange={handleChange}
                 margin="normal"
                 required
+                error={Boolean(errors.firstName)}
+                helperText={errors.firstName}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -167,6 +206,8 @@ export default function Profile() {
                 onChange={handleChange}
                 margin="normal"
                 required
+                error={Boolean(errors.lastName)}
+                helperText={errors.lastName}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -178,6 +219,8 @@ export default function Profile() {
                 onChange={handleChange}
                 margin="normal"
                 required
+                error={Boolean(errors.phone)}
+                helperText={errors.phone}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -190,6 +233,8 @@ export default function Profile() {
                 margin="normal"
                 type="email"
                 disabled
+                error={Boolean(errors.email)}
+                helperText={errors.email}
               />
             </Grid>
             <Grid item xs={12}>
@@ -201,6 +246,8 @@ export default function Profile() {
                 onChange={handleChange}
                 margin="normal"
                 required
+                error={Boolean(errors.address)}
+                helperText={errors.address}
               />
             </Grid>
             <Grid item xs={12} sm={4}>
@@ -212,6 +259,8 @@ export default function Profile() {
                 onChange={handleChange}
                 margin="normal"
                 required
+                error={Boolean(errors.city)}
+                helperText={errors.city}
               />
             </Grid>
             <Grid item xs={12} sm={4}>
@@ -223,6 +272,8 @@ export default function Profile() {
                 onChange={handleChange}
                 margin="normal"
                 required
+                error={Boolean(errors.province)}
+                helperText={errors.province}
               />
             </Grid>
             <Grid item xs={12} sm={4}>
@@ -234,6 +285,8 @@ export default function Profile() {
                 onChange={handleChange}
                 margin="normal"
                 required
+                error={Boolean(errors.postalCode)}
+                helperText={errors.postalCode}
               />
             </Grid>
           </Grid>
